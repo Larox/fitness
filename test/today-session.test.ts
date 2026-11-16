@@ -25,7 +25,7 @@ import type { PersistedAppState } from "../src/setup/types";
 import { markSessionCompleted, unmarkSessionCompleted } from "../src/today/completion";
 import { moderateCautionBanner } from "../src/today/moderate-caution";
 import { deleteSessionLog, getSessionLog, saveSessionLog } from "../src/today/session-log-store";
-import { defaultSetLogsForScheduled } from "../src/today/set-logs";
+import { defaultSetLogsForScheduled, normalizeExerciseSetLogs, scheduledUsesHold } from "../src/today/set-logs";
 import { assertTodaySessionSafe } from "../src/today/today-safety";
 import type { SessionLogRecord } from "../src/today/types";
 
@@ -171,5 +171,144 @@ describe("Today logging and week completion", () => {
   it("builds a deterministic weekly plan seed for fixtures", () => {
     const settings = defaultTrainingSettings(config);
     expect(defaultPlanSeed(settings)).toContain("daysPerWeek");
+  });
+
+  it("persists edited per-set reps and hold values through IndexedDB", async () => {
+    const repsSched = {
+      exerciseId: "ex_fixture_a",
+      sourceExerciseId: "ex_fixture_a",
+      reasons: [],
+      cautions: [],
+      reps: 10,
+      sets: 3,
+      hold_s: null,
+      conditionRisks: {},
+    };
+    const holdSched = {
+      exerciseId: "ex_fixture_hold",
+      sourceExerciseId: "ex_fixture_hold",
+      reasons: [],
+      cautions: [],
+      reps: "45 s",
+      sets: 2,
+      hold_s: 45,
+      conditionRisks: {},
+    };
+    const editedReps = defaultSetLogsForScheduled(repsSched).map((row, idx) =>
+      idx === 1 ? { ...row, reps: 7 } : row,
+    );
+    const editedHold = defaultSetLogsForScheduled(holdSched).map((row, idx) =>
+      idx === 0 ? { ...row, holdS: 52 } : row,
+    );
+
+    const record: SessionLogRecord = {
+      id: "train-1:2026-11-16T14:00:00.000Z",
+      sessionId: "train-1",
+      dayIndex: 1,
+      completedAt: "2026-11-16T14:00:00.000Z",
+      partial: false,
+      location: "gym",
+      title: "Logged sets",
+      exercises: [
+        {
+          exerciseId: repsSched.exerciseId,
+          sourceExerciseId: repsSched.sourceExerciseId,
+          done: true,
+          hurt: false,
+          bellKg: null,
+          sets: editedReps,
+        },
+        {
+          exerciseId: holdSched.exerciseId,
+          sourceExerciseId: holdSched.sourceExerciseId,
+          done: true,
+          hurt: false,
+          bellKg: null,
+          sets: editedHold,
+        },
+      ],
+    };
+    await saveSessionLog(record);
+    const loaded = await getSessionLog(record.id);
+    expect(loaded?.exercises[0]?.sets[1]?.reps).toBe(7);
+    expect(loaded?.exercises[1]?.sets[0]?.holdS).toBe(52);
+    expect(scheduledUsesHold(holdSched)).toBe(true);
+    await deleteSessionLog(record.id);
+  });
+
+  it("stores a skipped set on the session log", async () => {
+    const sched = {
+      exerciseId: "ex_fixture_b",
+      sourceExerciseId: "ex_fixture_b",
+      reasons: [],
+      cautions: [],
+      reps: 8,
+      sets: 3,
+      hold_s: null,
+      conditionRisks: {},
+    };
+    const sets = defaultSetLogsForScheduled(sched).map((row, idx) =>
+      idx === 2 ? { setIndex: row.setIndex, status: "skipped" as const, reps: row.reps } : row,
+    );
+    const record: SessionLogRecord = {
+      id: "train-2:2026-11-16T15:00:00.000Z",
+      sessionId: "train-2",
+      dayIndex: 2,
+      completedAt: "2026-11-16T15:00:00.000Z",
+      partial: true,
+      location: "home",
+      title: "Partial",
+      exercises: [
+        {
+          exerciseId: sched.exerciseId,
+          sourceExerciseId: sched.sourceExerciseId,
+          done: true,
+          hurt: false,
+          bellKg: null,
+          sets,
+        },
+      ],
+    };
+    await saveSessionLog(record);
+    const loaded = await getSessionLog(record.id);
+    expect(loaded?.exercises[0]?.sets[2]?.status).toBe("skipped");
+    await deleteSessionLog(record.id);
+  });
+
+  it("loads session logs saved before per-set details existed", async () => {
+    const legacy = {
+      id: "train-legacy:2026-11-15T10:00:00.000Z",
+      sessionId: "train-legacy",
+      dayIndex: 0,
+      completedAt: "2026-11-15T10:00:00.000Z",
+      partial: false,
+      location: "home",
+      title: "Legacy session",
+      exercises: [
+        {
+          exerciseId: "ex_legacy",
+          sourceExerciseId: "ex_legacy",
+          done: true,
+          hurt: false,
+          bellKg: 4,
+        },
+      ],
+    } as SessionLogRecord;
+    await saveSessionLog(legacy);
+    const loaded = await getSessionLog(legacy.id);
+    expect(loaded?.exercises[0]?.exerciseId).toBe("ex_legacy");
+    expect(loaded?.exercises[0]?.bellKg).toBe(4);
+    const sched = {
+      exerciseId: "ex_legacy",
+      sourceExerciseId: "ex_legacy",
+      reasons: [],
+      cautions: [],
+      reps: 10,
+      sets: 3,
+      hold_s: null,
+      conditionRisks: {},
+    };
+    expect(normalizeExerciseSetLogs(loaded!.exercises[0]!, sched)).toHaveLength(3);
+    await deleteSessionLog(legacy.id);
   });
 });
