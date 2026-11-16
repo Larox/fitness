@@ -10,7 +10,7 @@
         "reps": "10"
       }
     ],
-    "hernia_risk": "low",
-    "knee_risk": "low"
+    "concern_a_risk": "low",
+    "concern_b_risk": "low"
   }
 ]
