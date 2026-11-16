@@ -64,6 +64,38 @@ export async function getMediaByExerciseId(
   return (match as ExerciseMediaMeta | undefined) ?? null;
 }
 
+/** Replace metadata for an exercise in one transaction (exerciseId index is unique). */
+export async function replaceMediaMetaForExercise(
+  exerciseId: string,
+  next: ExerciseMediaMeta,
+  dropMediaId: string | null,
+): Promise<void> {
+  const existing = await getMediaByExerciseId(exerciseId);
+  let db: IDBDatabase;
+  try {
+    db = await openIdb();
+  } catch (err) {
+    throw err instanceof Error ? err : new Error("idb-unavailable");
+  }
+  const tx = db.transaction(META_STORE, "readwrite");
+  const store = tx.objectStore(META_STORE);
+  const drop = new Set<string>();
+  if (dropMediaId && dropMediaId !== next.id) {
+    drop.add(dropMediaId);
+  }
+  if (existing && existing.id !== next.id) {
+    drop.add(existing.id);
+  }
+  for (const id of drop) {
+    store.delete(id);
+  }
+  store.put({ ...next, exerciseId });
+  await new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error("idb-write-failed"));
+  });
+}
+
 export async function putMediaMeta(meta: ExerciseMediaMeta): Promise<void> {
   let db: IDBDatabase;
   try {

@@ -26,6 +26,18 @@ vi.mock("../src/media/meta-store", () => ({
   putMediaMeta: async (row: ExerciseMediaMeta) => {
     meta.set(row.id, row);
   },
+  replaceMediaMetaForExercise: async (
+    exerciseId: string,
+    next: ExerciseMediaMeta,
+    dropMediaId: string | null,
+  ) => {
+    for (const row of [...meta.values()]) {
+      if (row.exerciseId === exerciseId || row.id === dropMediaId) {
+        meta.delete(row.id);
+      }
+    }
+    meta.set(next.id, { ...next, exerciseId });
+  },
   deleteMediaMeta: async (id: string) => {
     meta.delete(id);
   },

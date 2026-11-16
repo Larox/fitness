@@ -176,6 +176,9 @@ export async function commitMediaForSave(
     const snap = state.draft.removedSnapshot;
     if (state.draft.removedWasUnsaved && snap) {
       await discardPendingMedia(snap);
+      if (saved) {
+        await deleteExerciseMedia(exerciseId);
+      }
     } else if (saved) {
       await deleteExerciseMedia(exerciseId);
     }

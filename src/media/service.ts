@@ -16,10 +16,11 @@ import {
   listMediaMeta,
   loadMediaSettings,
   putMediaMeta,
+  replaceMediaMetaForExercise,
   saveMediaSettings,
 } from "./meta-store";
 
-export { putMediaMeta, listMediaMeta };
+export { putMediaMeta, listMediaMeta, replaceMediaMetaForExercise };
 import type {
   ExerciseMediaMeta,
   MediaImportError,
@@ -187,10 +188,10 @@ export async function commitMediaChanges(
   }
   if (pending) {
     pending.exerciseId = exerciseId;
-    await putMediaMeta(pending);
-    const old = replaced ?? previous;
+    const old = replaced ?? previous ?? (await getMediaByExerciseId(exerciseId));
+    const dropId = old && old.id !== pending.id ? old.id : null;
+    await replaceMediaMetaForExercise(exerciseId, pending, dropId);
     if (old && old.id !== pending.id) {
-      await deleteMediaMeta(old.id);
       await deleteMediaBlob(old.fileKey);
       await deleteMediaBlob(old.posterKey);
     }

@@ -93,6 +93,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   let draftRoutineId = createUserRoutineId();
   const mediaState: MediaFlowState = createMediaFlowState(draftExerciseId);
   let mediaListRows: ExerciseMediaMeta[] = [];
+  let mediaSaveError: string | null = null;
 
   const bar = document.createElement("div");
   bar.className = "exercise-bar";
@@ -171,9 +172,13 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
             .join("")}</ul></div>`
         : "";
 
+    const mediaErr = mediaSaveError
+      ? `<div class="errsum" role="alert"><b>${escapeHtml(mediaSaveError)}</b></div>`
+      : "";
     let html = `<button type="button" class="back" data-act="back-my">‹ My exercises</button>
       <header class="hdr"><h1 class="title" id="exercise-form-title" tabindex="-1">${isEdit ? "Edit exercise" : "Add exercise"}</h1>
       <p class="sub">${isEdit ? "Changes apply from your next plan." : "The coach only plans with exercises in your library."}</p></header>
+      ${mediaErr}
       ${errSummary}
       <div class="sect"><h2>Basics</h2></div><div class="group">
         <div class="field"><label class="flabel" for="ex-name"><b>Name</b><span>Required</span></label>
@@ -314,9 +319,13 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
           `<div><dt>${escapeHtml(c.label)}</dt><dd>${escapeHtml(ex.conditionRisks[c.id] ?? "high")}</dd></div>`,
       )
       .join("");
+    const mediaErr = mediaSaveError
+      ? `<div class="errsum" role="alert"><b>${escapeHtml(mediaSaveError)}</b></div>`
+      : "";
     return `<button type="button" class="back" data-act="back-my">‹ My exercises</button>
       <p class="sub" style="text-transform:uppercase;font-size:13px;font-weight:600;color:var(--muted)">Library exercise</p>
       <h1 class="title" id="exercise-form-title" tabindex="-1">${escapeHtml(ex.name)}</h1>
+      ${mediaErr}
       <div class="lib-note">${ICONS.info} From your library. Name, dose, cues, source and risk levels can't be edited here. You can add your own photo or clip.</div>
       <div class="sect"><h2>Details</h2></div><div class="group"><dl class="readonly-dl">
         <div><dt>Dose</dt><dd>${escapeHtml(libraryDoseLabel(ex))}</dd></div>
@@ -767,11 +776,19 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       }
       case "save": {
         if (view === "library" && editingLibrary) {
-          void commitMediaForSave(mediaState, editingLibrary.id).then(() => {
-            view = "my";
-            void refreshMyThumbs();
-            render();
-          });
+          void (async () => {
+            try {
+              await commitMediaForSave(mediaState, editingLibrary!.id);
+              mediaSaveError = null;
+              view = "my";
+              await refreshMyThumbs();
+              render();
+            } catch {
+              mediaSaveError =
+                "Couldn't save the photo or clip. Your other edits are still here — try again.";
+              render();
+            }
+          })();
           return;
         }
         attemptedSave = true;
@@ -804,20 +821,28 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
             createdAt: new Date().toISOString(),
           } satisfies UserExercise);
         const saved = draftToUserExercise(draft, placeholder, new Date());
-        void commitMediaForSave(mediaState, saved.id).then(async () => {
-          const list = [...(persisted.userExercises ?? [])];
-          const idx = list.findIndex((e) => e.id === saved.id);
-          if (idx >= 0) list[idx] = saved;
-          else list.push(saved);
-          persisted = { ...persisted, userExercises: list };
-          persist(persisted);
-          statusMessage = `Saved “${saved.name}”`;
-          editing = null;
-          view = "my";
-          explicitFocusId = "my-title";
-          await refreshMyThumbs();
-          render();
-        });
+        void (async () => {
+          try {
+            await commitMediaForSave(mediaState, saved.id);
+            mediaSaveError = null;
+            const list = [...(persisted.userExercises ?? [])];
+            const idx = list.findIndex((e) => e.id === saved.id);
+            if (idx >= 0) list[idx] = saved;
+            else list.push(saved);
+            persisted = { ...persisted, userExercises: list };
+            persist(persisted);
+            statusMessage = `Saved “${saved.name}”`;
+            editing = null;
+            view = "my";
+            explicitFocusId = "my-title";
+            await refreshMyThumbs();
+            render();
+          } catch {
+            mediaSaveError =
+              "Couldn't save the photo or clip. Your other edits are still here — try again.";
+            render();
+          }
+        })();
         return;
       }
       case "delete": {
