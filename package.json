@@ -1,0 +1,24 @@
+{
+  "name": "fitness",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "ci": "npm run typecheck && npm run test && npm run build",
+    "sync-library": "node scripts/sync-library.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+  "typescript": "~5.7.2",
+  "vite": "^6.0.3",
+  "vite-plugin-pwa": "^0.21.1",
+  "vitest": "^2.1.8",
+    "workbox-window": "^7.3.0"
+  }
+}
