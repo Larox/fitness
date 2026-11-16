@@ -161,7 +161,6 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     if (!pendingPoseModelRemove) return;
     pendingPoseModelRemove = false;
     void clearPoseModelCache().then(async () => {
-      const { loadMediaSettings, saveMediaSettings } = await import("../media/meta-store");
       const st = await loadMediaSettings();
       await saveMediaSettings({ ...st, poseModelReady: false });
       mediaState.modelOnDevice = await isModelOnDevice();
