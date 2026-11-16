@@ -1,0 +1,115 @@
+[
+  {
+    "id": "plan_mob_a",
+    "title": "Plan mobility block A",
+    "category": "mobility / warm-up",
+    "duration_min": 12,
+    "exercises": [
+      {
+        "name": "Plan march",
+        "reps": "20",
+        "equipment": "bodyweight",
+        "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Plan band pull",
+        "reps": "15",
+        "equipment": "band",
+        "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      }
+    ],
+    "concern_a_risk": "low",
+    "concern_b_risk": "low"
+  },
+  {
+    "id": "plan_mob_b",
+    "title": "Plan mobility block B",
+    "category": "mobility",
+    "duration_min": 10,
+    "exercises": [
+      {
+        "name": "Plan reach",
+        "reps": "30 s",
+        "equipment": "bodyweight",
+        "concern_a_risk": "moderate",
+        "caution": "Move slowly",
+        "concern_b_risk": "low"
+      }
+    ],
+    "concern_a_risk": "low",
+    "concern_b_risk": "low"
+  },
+  {
+    "id": "plan_str_a",
+    "title": "Plan strength block A",
+    "category": "strength",
+    "duration_min": 18,
+    "exercises": [
+      {
+        "name": "Plan kettlebell hinge",
+        "reps": "10",
+        "equipment": "kettlebell",
+        "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Plan high hinge",
+        "reps": "8",
+        "equipment": "kettlebell",
+        "concern_a_risk": "high",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Plan hinge swap",
+        "reps": "10",
+        "equipment": "bodyweight",
+        "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      }
+    ],
+    "concern_a_risk": "low",
+    "concern_b_risk": "low"
+  },
+  {
+    "id": "plan_str_b",
+    "title": "Plan strength block B",
+    "category": "stability",
+    "duration_min": 15,
+    "exercises": [
+      {
+        "name": "Plan hold",
+        "reps": "6",
+        "equipment": "bodyweight",
+        "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Plan missing risk",
+        "reps": "5",
+        "equipment": "bodyweight",
+        "concern_b_risk": "low"
+      }
+    ],
+    "concern_a_risk": "low",
+    "concern_b_risk": "low"
+  },
+  {
+    "id": "plan_mob_rest",
+    "title": "Plan short mobility",
+    "category": "mobility",
+    "duration_min": 5,
+    "exercises": [
+      {
+        "name": "Plan ankle roll",
+        "reps": "10",
+        "equipment": "bodyweight",
+        "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      }
+    ],
+    "concern_a_risk": "low",
+    "concern_b_risk": "low"
+  }
+]

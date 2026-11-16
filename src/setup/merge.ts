@@ -6,6 +6,7 @@ import {
   sanitizeUserExercises,
   sanitizeWeekSessions,
 } from "../exercises/persisted";
+import { sanitizeWeekPlan } from "../plan/persisted";
 import type { PersistedAppState, TrainingSettings } from "./types";
 import { defaultTrainingSettings } from "./defaults";
 import {
@@ -124,6 +125,7 @@ export function mergePersistedState(
       hurtExclusions: [],
       deletedExerciseHistory: [],
       weekSessionsRemaining: [],
+      weekPlan: undefined,
       ...(stored && isPlainObject(stored) ? pickDisclaimerFields(stored) : {}),
     };
   }
@@ -137,5 +139,6 @@ export function mergePersistedState(
     pendingHurtRestore: sanitizePendingHurtRestore(stored.pendingHurtRestore),
     deletedExerciseHistory: sanitizeDeletedHistory(stored.deletedExerciseHistory),
     weekSessionsRemaining: sanitizeWeekSessions(stored.weekSessionsRemaining),
+    weekPlan: sanitizeWeekPlan(stored.weekPlan),
   };
 }
