@@ -35,7 +35,9 @@ export function probeClipDuration(file: Blob): Promise<number> {
           return;
         }
         if (clipTooLong(duration)) {
-          reject(new Error("too-long"));
+          const err = new Error("too-long") as Error & { durationS: number };
+          err.durationS = duration;
+          reject(err);
           return;
         }
         resolve(duration);

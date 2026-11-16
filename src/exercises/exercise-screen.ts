@@ -14,6 +14,7 @@ import {
   markRemove,
   mediaAttachHtml,
   onExerciseDeleted,
+  refreshMediaPoster,
   removeFromMediaList,
   startMediaImport,
   undoMediaListRemove,
@@ -222,7 +223,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         .join("")}
         ${draft.cues.length < 6 ? `<div class="field"><button type="button" class="link" data-act="cue-add">+ Add a cue</button></div>` : ""}
       </div>
-      ${mediaAttachHtml(mediaState, editing?.id ?? draftExerciseId)}
+      <div id="media-attach-mount">${mediaAttachHtml(mediaState, editing?.id ?? draftExerciseId)}</div>
       <div class="sect"><h2>Source</h2></div><div class="group">
         <div class="field"><label class="flabel" for="ex-link"><b>Link</b></label>
           <input class="textin" id="ex-link" type="url" data-act="link" value="${escapeHtml(draft.link)}" enterKeyHint="done" ${fieldInvalid("link", issues)} />
@@ -322,7 +323,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         <div><dt>Equipment</dt><dd>${escapeHtml(ex.equipment ?? "—")}</dd></div>
       </dl></div>
       <div class="sect"><h2>Risk per condition</h2></div><div class="group"><dl class="readonly-dl">${risks}</dl></div>
-      ${mediaAttachHtml(mediaState, ex.id)}`;
+      <div id="media-attach-mount">${mediaAttachHtml(mediaState, ex.id)}</div>`;
   }
 
   function renderMediaList(): string {
@@ -334,7 +335,9 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       ? `<div class="undo-row" role="status">Removed from ${escapeHtml(exerciseName(mediaState.pendingListRemove.exerciseId))}.
           <button type="button" data-act="media-list-undo">Undo</button></div>`
       : "";
+    const pendingId = mediaState.pendingListRemove?.id;
     const body = rows
+      .filter((row) => row.id !== pendingId)
       .map((row) => {
         const thumb = mediaState.thumbByExerciseId.get(row.exerciseId);
         return `<div class="restore-row">
@@ -418,8 +421,12 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
           : isEdit
             ? "Save changes"
             : "Save exercise";
+      const disableSave =
+        importing ||
+        (view === "library" && !dirty) ||
+        (view === "form" && isEdit && !dirty);
       bar.innerHTML = `<div class="in"><p class="help ${danger ? "danger" : ""}">${escapeHtml(helper)}</p>
-        <button class="primary" type="button" data-act="save" ${(!dirty || importing) ? "disabled" : ""}>${saveLabel}</button></div>`;
+        <button class="primary" type="button" data-act="save" ${disableSave ? "disabled" : ""}>${saveLabel}</button></div>`;
       bar.style.display = "";
       return;
     }
@@ -441,6 +448,27 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   async function openExerciseMedia(exerciseId: string): Promise<void> {
     await hydrateMediaDraft(mediaState, exerciseId);
     render();
+  }
+
+  function refreshMediaAttachMarkup(): void {
+    if (view !== "form" && view !== "library") {
+      render();
+      return;
+    }
+    const mount = root.querySelector("#media-attach-mount");
+    if (!mount) {
+      render();
+      return;
+    }
+    const exerciseId =
+      view === "library" && editingLibrary
+        ? editingLibrary.id
+        : editing?.id ?? draftExerciseId;
+    mount.innerHTML = mediaAttachHtml(mediaState, exerciseId);
+    renderBar();
+    if (explicitFocusId) {
+      document.getElementById(explicitFocusId)?.focus();
+    }
   }
 
   function render(partial = false): void {
@@ -505,7 +533,10 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
       return;
     }
-  saveDraftFieldFromTarget(target, target.value);
+    if (target instanceof HTMLInputElement && target.type === "file") {
+      return;
+    }
+    saveDraftFieldFromTarget(target, target.value);
     if (attemptedSave) {
       render();
       return;
@@ -617,22 +648,32 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       case "media-remove":
         mediaState.draft = markRemove(mediaState.draft);
         explicitFocusId = "media-pick-tile";
-        break;
+        void refreshMediaPoster(mediaState).then(() => refreshMediaAttachMarkup());
+        return;
       case "media-undo":
         mediaState.draft = undoRemove(mediaState.draft);
-        explicitFocusId = null;
-        break;
+        explicitFocusId = "media-undo";
+        void refreshMediaPoster(mediaState).then(() => refreshMediaAttachMarkup());
+        return;
       case "media-cancel":
-        cancelMediaImport(mediaState, () => render());
+        cancelMediaImport(mediaState, () => refreshMediaAttachMarkup());
         explicitFocusId = "media-pick-tile";
         return;
       case "media-list-remove":
         if (value) {
-          void removeFromMediaList(mediaState, value).then(() => render());
+          void removeFromMediaList(mediaState, value).then((removed) => {
+            if (removed) {
+              mediaListRows = mediaListRows.filter((row) => row.id !== value);
+            }
+            render();
+          });
         }
         return;
       case "media-list-undo":
-        void undoMediaListRemove(mediaState).then(() => render());
+        void undoMediaListRemove(mediaState).then(async () => {
+          mediaListRows = await listMediaMeta();
+          render();
+        });
         return;
       case "cat":
         if (value) {
@@ -845,7 +886,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       root.querySelector<HTMLButtonElement>("#media-pick-tile")?.focus();
       return;
     }
-    void startMediaImport(mediaState, file, () => render());
+    void startMediaImport(mediaState, file, () => refreshMediaAttachMarkup());
   }
 
   document.addEventListener("input", handleInput);

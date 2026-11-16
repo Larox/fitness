@@ -171,18 +171,25 @@ export async function commitMediaForSave(
   state: MediaFlowState,
   exerciseId: string,
 ): Promise<void> {
-  await commitMediaChanges(
-    exerciseId,
-    state.draft.pending,
-    state.draft.removeDraft,
-    state.draft.saved,
-    state.draft.replaced,
-  );
   if (state.draft.removeDraft) {
+    const saved = state.draft.saved;
+    const snap = state.draft.removedSnapshot;
+    if (state.draft.removedWasUnsaved && snap) {
+      await discardPendingMedia(snap);
+    } else if (saved) {
+      await deleteExerciseMedia(exerciseId);
+    }
     state.draft = emptyMediaDraft(exerciseId);
     revokeMediaPosterUrl(state);
     return;
   }
+  await commitMediaChanges(
+    exerciseId,
+    state.draft.pending,
+    false,
+    state.draft.saved,
+    state.draft.replaced,
+  );
   if (state.draft.pending) {
     state.draft.saved = state.draft.pending;
     state.draft.pending = null;
@@ -194,6 +201,13 @@ export async function commitMediaForSave(
 export async function discardUnsavedMedia(state: MediaFlowState): Promise<void> {
   if (state.draft.pending) {
     await discardPendingMedia(state.draft.pending);
+  }
+  if (
+    state.draft.removedSnapshot &&
+    state.draft.removedWasUnsaved &&
+    (!state.draft.saved || state.draft.removedSnapshot.id !== state.draft.saved.id)
+  ) {
+    await discardPendingMedia(state.draft.removedSnapshot);
   }
   state.abort?.abort();
 }
@@ -221,10 +235,17 @@ export async function commitPendingMediaListRemove(state: MediaFlowState): Promi
 export async function removeFromMediaList(
   state: MediaFlowState,
   mediaId: string,
-): Promise<void> {
+): Promise<boolean> {
+  if (state.pendingListRemove?.id === mediaId) {
+    return false;
+  }
   await commitPendingMediaListRemove(state);
   const removed = await detachMediaMeta(mediaId);
+  if (!removed) {
+    return false;
+  }
   state.pendingListRemove = removed;
+  return true;
 }
 
 export async function undoMediaListRemove(state: MediaFlowState): Promise<void> {

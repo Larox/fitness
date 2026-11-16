@@ -1,10 +1,11 @@
 import {
   PHOTO_JPEG_QUALITY,
   PHOTO_MAX_LONG_EDGE,
+  PHOTO_MAX_SOURCE_PIXELS,
   PHOTO_THUMB_LONG_EDGE,
-  photoSourceTooLarge,
 } from "./limits";
 import { scaleToLongEdge } from "./format";
+import { rejectOversizedPhotoSource } from "./photo-dimensions";
 
 export interface ProcessedPhoto {
   full: Blob;
@@ -59,6 +60,7 @@ async function drawJpeg(
 }
 
 export async function processPhotoFile(file: Blob): Promise<ProcessedPhoto> {
+  await rejectOversizedPhotoSource(file);
   let bitmap: ImageBitmap;
   try {
     bitmap = await blobToBitmap(file);
@@ -67,7 +69,7 @@ export async function processPhotoFile(file: Blob): Promise<ProcessedPhoto> {
   }
   const sourceWidth = bitmap.width;
   const sourceHeight = bitmap.height;
-  if (photoSourceTooLarge(file.size, sourceWidth, sourceHeight)) {
+  if (sourceWidth * sourceHeight > PHOTO_MAX_SOURCE_PIXELS) {
     bitmap.close?.();
     throw new Error("source-too-large");
   }

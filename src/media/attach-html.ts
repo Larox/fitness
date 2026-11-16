@@ -87,7 +87,7 @@ export function renderMediaAttachSection(
     const removed =
       options.removedStatus
         ? `<div class="media-removed" role="status">Photo removed. It's deleted from this phone when you save.
-            <button type="button" data-act="media-undo">Undo</button></div>`
+            <button type="button" id="media-undo" data-act="media-undo">Undo</button></div>`
         : "";
     body = `${removed}<button type="button" class="media-add" data-act="media-pick" id="media-pick-tile">
       <span class="media-add-icon" aria-hidden="true">📷</span>

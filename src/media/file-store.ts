@@ -104,6 +104,10 @@ async function opfsWrite(
   }
   try {
     const file = await root.getFileHandle(key, { create: true });
+    if (typeof file.createWritable !== "function") {
+      await opfsDelete(key);
+      return false;
+    }
     const writable = await file.createWritable();
     const total = blob.size;
     let loaded = 0;
@@ -125,6 +129,11 @@ async function opfsWrite(
         }
       }
       await writable.close();
+      const written = await file.getFile();
+      if (written.size === 0) {
+        await opfsDelete(key);
+        return false;
+      }
       return true;
     } catch (err) {
       try {
@@ -135,6 +144,7 @@ async function opfsWrite(
       throw err;
     }
   } catch {
+    await opfsDelete(key);
     return false;
   }
 }
@@ -147,6 +157,10 @@ async function opfsRead(key: string): Promise<Blob | null> {
   try {
     const file = await root.getFileHandle(key);
     const f = await file.getFile();
+    if (f.size === 0) {
+      await opfsDelete(key);
+      return null;
+    }
     return f;
   } catch {
     return null;
@@ -159,7 +173,7 @@ async function opfsDelete(key: string): Promise<void> {
     return;
   }
   try {
-    await root.removeEntry(key);
+    await root.removeEntry(key, { recursive: false });
   } catch {
     /* ignore missing */
   }
@@ -167,7 +181,7 @@ async function opfsDelete(key: string): Promise<void> {
 
 export async function readMediaBlob(key: string): Promise<Blob | null> {
   const fromOpfs = await opfsRead(key);
-  if (fromOpfs) {
+  if (fromOpfs && fromOpfs.size > 0) {
     return fromOpfs;
   }
   return idbGet(key);
@@ -183,6 +197,7 @@ export async function writeMediaBlob(
   if (wroteOpfs) {
     return;
   }
+  await opfsDelete(key);
   try {
     await idbPut(key, blob, onProgress, signal);
   } catch (err) {

@@ -11,6 +11,10 @@ export interface MediaFormDraft {
   pending: ExerciseMediaMeta | null;
   /** Prior committed media still on disk until Save replaces or removes it. */
   replaced: ExerciseMediaMeta | null;
+  /** Last visible media removed in draft; used for Undo before Save. */
+  removedSnapshot: ExerciseMediaMeta | null;
+  /** True when Remove cleared an unsaved import or replace. */
+  removedWasUnsaved: boolean;
   removeDraft: boolean;
   status: MediaUploadStatus;
   error?: MediaImportError;
@@ -26,6 +30,8 @@ export function emptyMediaDraft(exerciseId: string): MediaFormDraft {
     display: null,
     pending: null,
     replaced: null,
+    removedSnapshot: null,
+    removedWasUnsaved: false,
     removeDraft: false,
     status: "idle",
   };
@@ -41,6 +47,8 @@ export function loadMediaDraft(
     display: saved,
     pending: null,
     replaced: null,
+    removedSnapshot: null,
+    removedWasUnsaved: false,
     removeDraft: false,
     status: "idle",
   };
@@ -57,9 +65,16 @@ export function isMediaDraftDirty(draft: MediaFormDraft): boolean {
 }
 
 export function markMediaRemoved(draft: MediaFormDraft): MediaFormDraft {
+  const snapshot = draft.display ?? draft.pending;
+  const removedWasUnsaved =
+    draft.pending !== null ||
+    (snapshot !== null &&
+      (draft.saved === null || draft.saved.id !== snapshot.id));
   return {
     ...draft,
     removeDraft: true,
+    removedSnapshot: snapshot,
+    removedWasUnsaved,
     display: null,
     pending: null,
     error: undefined,
@@ -68,9 +83,22 @@ export function markMediaRemoved(draft: MediaFormDraft): MediaFormDraft {
 }
 
 export function undoMediaRemove(draft: MediaFormDraft): MediaFormDraft {
+  const snapshot = draft.removedSnapshot ?? draft.saved;
+  if (!snapshot) {
+    return {
+      ...draft,
+      removeDraft: false,
+      removedSnapshot: null,
+      removedWasUnsaved: false,
+    };
+  }
+  const restorePending = draft.removedWasUnsaved;
   return {
     ...draft,
     removeDraft: false,
-    display: draft.saved,
+    removedSnapshot: null,
+    removedWasUnsaved: false,
+    display: snapshot,
+    pending: restorePending ? snapshot : null,
   };
 }

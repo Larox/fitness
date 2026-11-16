@@ -152,8 +152,10 @@ export async function importMediaForExercise(
     await Promise.all([deleteMediaBlob(keys.fileKey), deleteMediaBlob(keys.posterKey)]);
     const mapped = mapImportError(err);
     const error = new Error(mapped);
-  if (err instanceof Error && err.message === "too-long") {
-      (error as Error & { durationS?: number }).durationS = await safeDuration(file);
+    if (err instanceof Error && err.message === "too-long") {
+      const fromProbe = err as Error & { durationS?: number };
+      (error as Error & { durationS?: number }).durationS =
+        fromProbe.durationS ?? (await safeDuration(file));
     }
     if (err instanceof Error && err.message === "too-big") {
       (error as Error & { sizeBytes?: number }).sizeBytes = file.size;

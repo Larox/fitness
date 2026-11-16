@@ -20,7 +20,7 @@ const saved: ExerciseMediaMeta = {
 };
 
 describe("media draft", () => {
-  it("remove plus Undo is a draft-only change", () => {
+  it("remove plus Undo is a draft-only change for saved media", () => {
     let draft = loadMediaDraft("uex_1", saved);
     draft = markMediaRemoved(draft);
     expect(draft.display).toBeNull();
