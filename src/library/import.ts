@@ -7,6 +7,7 @@ import {
   normalizeRisk,
   readRoutineLibraryRisk,
 } from "./normalize";
+import { parseRoutineVideoPath } from "./video-path";
 import { readLibraryRisk } from "./risk";
 import type {
   ExerciseOverlayFile,
@@ -55,6 +56,23 @@ export function importLibrary(
     return { routines: [], exercises: [], skipped: [], errors };
   }
 
+  for (let i = 0; i < snapshot.length; i++) {
+    const routine = snapshot[i]!;
+    if (routine.video !== undefined) {
+      const parsed = parseRoutineVideoPath(
+        routine.video,
+        `routines[${i}].video (routine ${routine.id})`,
+      );
+      if (!parsed.ok) {
+        errors.push(parsed.error);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return { routines: [], exercises: [], skipped: [], errors };
+  }
+
   for (const routine of snapshot) {
     const rawExercises = routine.exercises;
     if (!rawExercises || rawExercises.length === 0) {
@@ -88,10 +106,14 @@ export function importLibrary(
       (libraryField) => readRoutineLibraryRisk(routine, libraryField),
     );
 
+    const videoParsed = parseRoutineVideoPath(routine.video, `routine ${routine.id}.video`);
+    const video = videoParsed.ok ? videoParsed.path : undefined;
+
     routines.push({
       id: routine.id,
       title: routine.title,
       source: routine.source,
+      video,
       categories: normalizeCategories(routine.category),
       equipment: routine.equipment ?? [],
       frequency: routine.frequency ?? null,

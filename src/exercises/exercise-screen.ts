@@ -1,6 +1,14 @@
 import "../media/media.css";
 import type { AppConfig } from "../config/types";
-import type { NormalizedExercise } from "../library/types";
+import { renderLibraryVideoSection } from "../library/library-video-section";
+import { shouldShowLibraryRoutineVideo } from "../library/library-video-visibility";
+import { probeLibraryVideoDuration } from "../library/library-video-fetch";
+import { getRoutineLibraryPose } from "../library/routine-pose";
+import type { NormalizedExercise, NormalizedRoutine } from "../library/types";
+import {
+  LibraryVideoPreview,
+  mountLibraryVideoPreview,
+} from "../media/library-video-preview";
 import { escapeHtml, ICONS } from "../setup/icons";
 import { createUserExerciseId, createUserRoutineId } from "./ids";
 import {
@@ -25,7 +33,7 @@ import {
 } from "./exercise-media-flow";
 import { loadMediaSettings, saveMediaSettings } from "../media/meta-store";
 import { listMediaMeta } from "../media/service";
-import type { ExerciseMediaMeta } from "../media/types";
+import type { ExerciseMediaMeta, PoseMeta } from "../media/types";
 import { formatMegabytes, formatDurationMmSs } from "../media/format";
 import { mergePersistedState } from "../setup/merge";
 import type { PersistedAppState } from "../setup/types";
@@ -60,20 +68,21 @@ import {
   cancelPoseJob,
   loadPoseModelManifest,
   startPoseJob,
+  startRoutineLibraryPoseJob,
   subscribePoseJob,
   resumePoseJobMarker,
   isModelOnDevice,
   clearUnfinishedFlag,
 } from "../pose/pose-job-service";
 
-type View = "my" | "form" | "hurt" | "library" | "media-list";
+type View = "my" | "form" | "hurt" | "library" | "media-list" | "routines" | "routine";
 
 export interface MountExerciseFlowOptions {
   config: AppConfig;
   storage: SettingsStorage;
   root: HTMLElement;
   libraryExercises: readonly NormalizedExercise[];
-  libraryRoutines: readonly { categories: string[] }[];
+  libraryRoutines: readonly NormalizedRoutine[];
   initialView: View;
   editId?: string;
   onBackToSettings: () => void;
@@ -85,7 +94,8 @@ function cloneState(state: PersistedAppState): PersistedAppState {
 
 export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy: () => void } {
   const { config, storage, root, libraryExercises, onBackToSettings } = options;
-  const categories = collectLibraryCategories(options.libraryRoutines);
+  const libraryRoutines = options.libraryRoutines;
+  const categories = collectLibraryCategories(libraryRoutines);
 
   let view: View = options.initialView;
   let persisted = cloneState(mergePersistedState(storage.load(), config));
@@ -115,6 +125,12 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   let figurePlayer: FigurePlayer | null = null;
   let figurePaused = false;
   let pendingPoseModelRemove = false;
+  let editingRoutine: NormalizedRoutine | null = null;
+  let libraryVideoPreview: LibraryVideoPreview | null = null;
+  let routineLibraryPoseMeta: PoseMeta | undefined;
+  let libraryVideoDurationS: number | null = null;
+  let libraryRoutineAnimView: "anim" | "clip" = "anim";
+  let routineUnfinishedAnim = false;
 
   const bar = document.createElement("div");
   bar.className = "exercise-bar";
@@ -128,6 +144,10 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       if (job?.phase === "ready") {
         if (job.pendingPose && mediaState.draft.display?.id === job.mediaId) {
           applyPendingPoseFromJob(mediaState, job.mediaId, job.pendingPose);
+        } else if (job.pendingPose && findRoutine(job.exerciseId)) {
+          routineLibraryPoseMeta = job.pendingPose;
+          mediaState.unfinishedAnim = false;
+          await clearUnfinishedFlag(job.exerciseId);
         } else {
           const meta = await getExerciseMedia(job.exerciseId);
           if (meta && mediaState.draft.display?.id === meta.id) {
@@ -138,7 +158,10 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
           }
         }
       }
-      if (view === "form" || view === "library") {
+      if (view === "library" || view === "routine") {
+        render();
+        afterShellRender();
+      } else if (view === "form") {
         refreshMediaAttachMarkup();
       }
     })();
@@ -183,6 +206,123 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     const sets = exercise.sets ?? 1;
     const reps = exercise.reps ?? "—";
     return `${sets} × ${reps}`;
+  }
+
+  function findRoutine(routineId: string): NormalizedRoutine | undefined {
+    return libraryRoutines.find((routine) => routine.id === routineId);
+  }
+
+  function activeLibraryRoutine(): NormalizedRoutine | null {
+    if (editingRoutine) {
+      return editingRoutine;
+    }
+    if (editingLibrary) {
+      return findRoutine(editingLibrary.routineId) ?? null;
+    }
+    return null;
+  }
+
+  function showLibraryVideoForActiveRoutine(): boolean {
+    const routine = activeLibraryRoutine();
+    if (!routine) {
+      return false;
+    }
+    const context = view === "routine" ? "routine" : "library-exercise";
+    return shouldShowLibraryRoutineVideo(
+      routine.video,
+      Boolean(mediaState.draft.display),
+      context,
+    );
+  }
+
+  async function loadRoutineLibraryVideoState(routine: NormalizedRoutine): Promise<void> {
+    libraryVideoDurationS = null;
+    routineLibraryPoseMeta = undefined;
+    const settings = await loadMediaSettings();
+    routineUnfinishedAnim = Boolean(settings.unfinishedAnim?.[routine.id]);
+    if (!routine.video) {
+      return;
+    }
+    const stored = await getRoutineLibraryPose(routine.id);
+    if (stored) {
+      routineLibraryPoseMeta = stored.pose;
+      libraryVideoDurationS = stored.durationS;
+      return;
+    }
+    libraryVideoDurationS = await probeLibraryVideoDuration(routine.video);
+  }
+
+  function libraryVideoSectionHtml(): string {
+    const routine = activeLibraryRoutine();
+    if (!routine || !showLibraryVideoForActiveRoutine()) {
+      return "";
+    }
+    return renderLibraryVideoSection({
+      routine,
+      durationS: libraryVideoDurationS,
+      pose: routineLibraryPoseMeta,
+      job:
+        mediaState.poseJob?.exerciseId === routine.id ? mediaState.poseJob : null,
+      modelOnDevice: mediaState.modelOnDevice,
+      modelCached: mediaState.modelOnDevice,
+      manifestLabel: mediaState.manifestLabel,
+      unfinished: routineUnfinishedAnim,
+      formAnimView: libraryRoutineAnimView,
+    });
+  }
+
+  async function mountLibraryVideoIfNeeded(): Promise<void> {
+    libraryVideoPreview?.destroy();
+    libraryVideoPreview = null;
+    figurePlayer?.destroy();
+    figurePlayer = null;
+    const routine = activeLibraryRoutine();
+    const mount = root.querySelector("#library-video-mount");
+    if (
+      !mount ||
+      !(mount instanceof HTMLElement) ||
+      !routine?.video ||
+      !showLibraryVideoForActiveRoutine() ||
+      libraryVideoDurationS === null
+    ) {
+      return;
+    }
+    if (libraryRoutineAnimView === "anim" && routineLibraryPoseMeta) {
+      mount.innerHTML = "";
+      const canvas = root.querySelector<HTMLCanvasElement>("[data-role=pose-canvas]");
+      if (canvas) {
+        const blob = await readMediaBlob(routineLibraryPoseMeta.key);
+        if (blob) {
+          const reduced =
+            typeof matchMedia === "function" &&
+            matchMedia("(prefers-reduced-motion: reduce)").matches;
+          figurePlayer = new FigurePlayer({
+            canvas,
+            blob,
+            exerciseName: routine.title,
+            reducedMotion: reduced,
+          });
+          await figurePlayer.load();
+          figurePlayer.mount();
+        }
+      }
+      return;
+    }
+    libraryVideoPreview = await mountLibraryVideoPreview({
+      root: mount,
+      relativePath: routine.video,
+      ariaLabel: `Routine preview for ${routine.title}`,
+    });
+    if (!libraryVideoPreview.isPlaying()) {
+      libraryVideoDurationS = null;
+      const section = mount.closest(".group");
+      section?.querySelector("#library-video-anim-mount")?.remove();
+      mount.remove();
+    }
+  }
+
+  function afterShellRender(): void {
+    void mountLibraryVideoIfNeeded();
   }
 
   function renderRiskSegment(
@@ -362,6 +502,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       <div class="group">${importedRows || `<div class="empty">${ICONS.info}<p>No imported exercises.</p></div>`}</div>
       <div class="sect"><h2>Library</h2></div>
       <div class="group">
+        <button type="button" class="nrow" data-act="open-routines"><span class="txt"><b>Imported routines</b><span class="ds">${libraryRoutines.length} from your library</span></span>${ICONS.chev}</button>
         <button type="button" class="nrow" data-act="open-hurt"><span class="txt"><b>Marked as hurt</b><span class="ds">${hurtCount} kept out of plans</span></span>${ICONS.chev}</button>
         <button type="button" class="nrow" data-act="open-media-list"><span class="txt"><b>Photos and clips</b><span class="ds">${escapeHtml(mediaState.mediaUsageText || "…")}</span></span>${ICONS.chev}</button>
       </div>`;
@@ -386,12 +527,46 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       <h1 class="title" id="exercise-form-title" tabindex="-1">${escapeHtml(ex.name)}</h1>
       ${mediaErr}
       <div class="lib-note">${ICONS.info} From your library. Name, dose, cues, source and risk levels can't be edited here. You can add your own photo or clip.</div>
+      ${libraryVideoSectionHtml()}
       <div class="sect"><h2>Details</h2></div><div class="group"><dl class="readonly-dl">
         <div><dt>Dose</dt><dd>${escapeHtml(libraryDoseLabel(ex))}</dd></div>
         <div><dt>Equipment</dt><dd>${escapeHtml(ex.equipment ?? "—")}</dd></div>
       </dl></div>
       <div class="sect"><h2>Risk per condition</h2></div><div class="group"><dl class="readonly-dl">${risks}</dl></div>
       <div id="media-attach-mount">${mediaAttachHtml(mediaState, ex.id)}</div>`;
+  }
+
+  function renderRoutinesList(): string {
+    const rows = libraryRoutines
+      .map(
+        (routine) =>
+          `<button type="button" class="nrow" data-act="open-routine" data-v="${routine.id}"><span class="txt"><b>${escapeHtml(routine.title)}</b><br/><span class="preview">${escapeHtml(routine.categories.join(" · ") || "Routine")}</span><span class="ds">Imported · read-only</span></span>${ICONS.chev}</button>`,
+      )
+      .join("");
+    return `<button type="button" class="back" data-act="back-my">‹ My exercises</button>
+      <h1 class="title" tabindex="-1">Imported routines</h1>
+      <p class="sub">Grouped exercises from your library export. Previews use videos your deploy serves separately.</p>
+      <div class="group">${rows || `<div class="empty">${ICONS.info}<p>No routines in the library.</p></div>`}</div>`;
+  }
+
+  function renderRoutineDetail(): string {
+    const routine = editingRoutine;
+    if (!routine) {
+      return "";
+    }
+    const exerciseRows = libraryExercises
+      .filter((exercise) => exercise.routineId === routine.id)
+      .map(
+        (exercise) =>
+          `<button type="button" class="nrow" data-act="open-library" data-v="${exercise.id}"><span class="txt"><b>${escapeHtml(exercise.name)}</b><br/><span class="preview">${escapeHtml(libraryDoseLabel(exercise))}</span></span>${ICONS.chev}</button>`,
+      )
+      .join("");
+    return `<button type="button" class="back" data-act="back-routines">‹ Routines</button>
+      <p class="sub" style="text-transform:uppercase;font-size:13px;font-weight:600;color:var(--muted)">Library routine</p>
+      <h1 class="title" tabindex="-1">${escapeHtml(routine.title)}</h1>
+      ${libraryVideoSectionHtml()}
+      <div class="sect"><h2>Exercises</h2></div>
+      <div class="group">${exerciseRows}</div>`;
   }
 
   function renderMediaList(): string {
@@ -563,7 +738,11 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   }
 
   function refreshMediaAttachMarkup(): void {
-    if (view !== "form" && view !== "library") {
+    if (view === "library") {
+      render();
+      return;
+    }
+    if (view !== "form") {
       render();
       return;
     }
@@ -572,10 +751,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       render();
       return;
     }
-    const exerciseId =
-      view === "library" && editingLibrary
-        ? editingLibrary.id
-        : editing?.id ?? draftExerciseId;
+    const exerciseId = editing?.id ?? draftExerciseId;
     mount.innerHTML = mediaAttachHtml(mediaState, exerciseId);
     renderBar();
     mountFigureIfNeeded();
@@ -604,10 +780,17 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       root.innerHTML = renderMediaList();
     } else if (view === "hurt") {
       root.innerHTML = renderHurtList();
+    } else if (view === "routines") {
+      root.innerHTML = renderRoutinesList();
+    } else if (view === "routine") {
+      root.innerHTML = renderRoutineDetail();
     } else {
       root.innerHTML = renderMyList();
     }
     renderBar();
+    if (view === "library" || view === "routine") {
+      afterShellRender();
+    }
 
     if (explicitFocusId) {
       const id = explicitFocusId;
@@ -700,13 +883,36 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         return;
       case "back-my":
         mediaSaveError = null;
+        libraryVideoPreview?.destroy();
+        libraryVideoPreview = null;
         commitPoseModelRemove();
         void discardUnsavedMedia(mediaState).then(() => {
           editingLibrary = null;
+          editingRoutine = null;
         });
         void commitPendingMediaListRemove(mediaState);
         view = "my";
         void refreshMyThumbs();
+        break;
+      case "back-routines":
+        libraryVideoPreview?.destroy();
+        libraryVideoPreview = null;
+        editingRoutine = null;
+        view = "routines";
+        break;
+      case "open-routines":
+        mediaSaveError = null;
+        view = "routines";
+        break;
+      case "open-routine":
+        if (value) {
+          editingRoutine = findRoutine(value) ?? null;
+          editingLibrary = null;
+          view = "routine";
+          if (editingRoutine) {
+            void loadRoutineLibraryVideoState(editingRoutine).then(() => render());
+          }
+        }
         break;
       case "open-hurt":
         mediaSaveError = null;
@@ -715,11 +921,21 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       case "open-library":
         if (value) {
           editingLibrary = libraryExercises.find((e) => e.id === value) ?? null;
+          editingRoutine = null;
           editing = null;
           view = "library";
-          void openExerciseMedia(value);
+          render();
+          const routine =
+            editingLibrary ? findRoutine(editingLibrary.routineId) : null;
+          void (async () => {
+            await openExerciseMedia(value);
+            if (routine) {
+              await loadRoutineLibraryVideoState(routine);
+            }
+            render();
+          })();
         }
-        break;
+        return;
       case "open-media-list":
         mediaSaveError = null;
         view = "media-list";
@@ -787,6 +1003,17 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
             mediaState.exerciseName,
             mediaState.modelOnDevice,
           );
+        } else {
+          const routine = activeLibraryRoutine();
+          if (routine?.video && libraryVideoDurationS) {
+            void startRoutineLibraryPoseJob(
+              { poseModelBaseUrl: poseBaseUrl },
+              routine.id,
+              routine.video,
+              libraryVideoDurationS,
+              mediaState.modelOnDevice,
+            );
+          }
         }
         return;
       }
@@ -795,8 +1022,13 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         return;
       case "pose-view":
         if (value === "anim" || value === "clip") {
-          mediaState.formAnimView = value;
-          refreshMediaAttachMarkup();
+          if (mediaState.draft.display?.kind === "clip") {
+            mediaState.formAnimView = value;
+            refreshMediaAttachMarkup();
+          } else if (view === "library" || view === "routine") {
+            libraryRoutineAnimView = value;
+            render();
+          }
         }
         return;
       case "pose-pause":
@@ -1079,6 +1311,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
 
   return {
     destroy: () => {
+      libraryVideoPreview?.destroy();
       figurePlayer?.destroy();
       unsubPose();
       void cancelPoseJob();

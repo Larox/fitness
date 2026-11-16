@@ -46,6 +46,11 @@ export interface PoseJobMarker {
   startedAt: string;
 }
 
+export interface RoutineLibraryPoseEntry {
+  pose: PoseMeta;
+  durationS: number;
+}
+
 export interface MediaStorageSettings {
   persistGranted?: boolean;
   persistRequested?: boolean;
@@ -54,6 +59,8 @@ export interface MediaStorageSettings {
   /** Per exercise, whether Today shows animation or clip first. */
   todayMediaView?: Record<string, "anim" | "clip">;
   unfinishedAnim?: Record<string, boolean>;
+  /** Stick-figure animation generated from a routine's library video. */
+  routineLibraryPose?: Record<string, RoutineLibraryPoseEntry>;
 }
 
 export interface MediaUsageSummary {

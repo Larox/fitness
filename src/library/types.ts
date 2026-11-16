@@ -74,6 +74,8 @@ export interface NormalizedRoutine {
   id: string;
   title: string;
   source?: string;
+  /** Relative path to deploy-served preview video (validated at import). */
+  video?: string;
   categories: string[];
   equipment: string[];
   frequency: string | null;
