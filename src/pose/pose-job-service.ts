@@ -5,12 +5,16 @@ import { estimateDeviceStorage } from "../media/file-store";
 import { hasStorageForNewFile } from "../media/limits";
 import { downloadPoseModelFiles } from "./model-download";
 import { fetchPoseModelManifest, formatModelTotal, type PoseModelManifest } from "./model-manifest";
-import { isPoseModelCached } from "./model-cache";
+import { isPoseModelCached, poseModelCachedBytes } from "./model-cache";
 import { createMediapipePoseDetector } from "./mediapipe-factory";
 import { sampleClipLandmarks } from "./clip-sampler";
 import { processLandmarkFrames } from "./process";
-import { attachPoseToMedia, deletePoseOrphan } from "./pose-persist";
-import { poseFileKey } from "./pose-keys";
+import {
+  attachPoseToMedia,
+  writePendingPoseFile,
+} from "./pose-persist";
+import { resolvePoseModelUrls, isPoseModelAvailableOffline } from "./model-resolve";
+import type { PoseMeta } from "../media/types";
 
 export type PoseJobPhase =
   | "idle"
@@ -32,6 +36,8 @@ export interface PoseJobState {
   processFrame?: number;
   processTotal?: number;
   modelManifest?: PoseModelManifest | null;
+  /** Pose finished before Save; consumer merges onto the draft display. */
+  pendingPose?: PoseMeta;
 }
 
 type Listener = (state: PoseJobState | null) => void;
@@ -99,11 +105,19 @@ export async function startPoseJob(
   abort?.abort();
   abort = new AbortController();
   const signal = abort.signal;
-  const manifest = (await loadPoseModelManifest(config)) ?? {
-    version: "lite",
-    totalBytes: 21 * 1024 * 1024,
-    files: [{ path: "pose_landmarker_lite.task", bytes: 0 }],
-  };
+  let manifest = await loadPoseModelManifest(config);
+  if (!manifest && modelCached) {
+    const bytes = await poseModelCachedBytes();
+    manifest = {
+      version: "pose_landmarker_lite",
+      totalBytes: bytes,
+      files: [],
+    };
+  }
+  if (!manifest) {
+    setJob({ phase: "offline", exerciseId: meta.exerciseId, mediaId: meta.id });
+    return;
+  }
   const base = config.poseModelBaseUrl.replace(/\/$/, "");
   const settings = await loadMediaSettings();
   await saveMediaSettings({
@@ -155,11 +169,27 @@ export async function startPoseJob(
       modelManifest: manifest,
     });
 
+    if (modelCached || typeof navigator === "undefined" || navigator.onLine === false) {
+      const offlineReady = await isPoseModelAvailableOffline(base);
+      if (!offlineReady && (modelCached || navigator.onLine === false)) {
+        setJob({
+          phase: "offline",
+          exerciseId: meta.exerciseId,
+          mediaId: meta.id,
+          modelManifest: manifest,
+        });
+        return;
+      }
+    }
+
     const clipBlob = await readMediaFileBlob(meta);
     if (!clipBlob) throw new Error("clip-missing");
-    const wasmUrl = `${base}/wasm`;
-    const modelUrl = `${base}/pose_landmarker_lite.task`;
-    const detector = await createMediapipePoseDetector({ wasmBaseUrl: wasmUrl, modelUrl });
+    const resolved = await resolvePoseModelUrls(base);
+    const detector = await createMediapipePoseDetector({
+      wasmBaseUrl: resolved.wasmBaseUrl,
+      modelUrl: resolved.modelUrl,
+      revoke: resolved.revoke,
+    });
     try {
       const landmarks = await sampleClipLandmarks(
         clipBlob,
@@ -183,31 +213,38 @@ export async function startPoseJob(
         });
         return;
       }
-      const attached = await attachPoseToMedia(meta.exerciseId, meta.id, result.blob, {
+      const poseFields = {
         frames: result.frames,
         fps: 15,
         keyFrame: result.keyFrame,
         createdAt: new Date().toISOString(),
         modelVersion: manifest.version,
-      });
+      };
+      const attached = await attachPoseToMedia(meta.exerciseId, meta.id, result.blob, poseFields);
+      let pendingPose: PoseMeta | undefined;
       if (!attached) {
-        await deletePoseOrphan(poseFileKey(meta.id));
+        pendingPose = await writePendingPoseFile(meta.id, result.blob, poseFields);
       }
       setJob({
         phase: "ready",
         exerciseId: meta.exerciseId,
         mediaId: meta.id,
         modelManifest: manifest,
+        pendingPose,
       });
     } finally {
       detector.close();
     }
-  } catch {
+  } catch (err) {
     if (signal.aborted) {
       setJob({ phase: "offer", exerciseId: meta.exerciseId, mediaId: meta.id, modelManifest: manifest });
       return;
     }
-    setJob({ phase: "offline", exerciseId: meta.exerciseId, mediaId: meta.id, modelManifest: manifest });
+    if (err instanceof Error && err.message === "pose-model-offline") {
+      setJob({ phase: "offline", exerciseId: meta.exerciseId, mediaId: meta.id, modelManifest: manifest });
+      return;
+    }
+    setJob({ phase: "failed", exerciseId: meta.exerciseId, mediaId: meta.id, modelManifest: manifest });
   } finally {
     const st = await loadMediaSettings();
     await saveMediaSettings({ ...st, poseJob: null });
@@ -215,7 +252,7 @@ export async function startPoseJob(
 }
 
 export function modelSizeLabel(manifest: PoseModelManifest | null | undefined): string {
-  if (!manifest) return "21 MB";
+  if (!manifest) return "…";
   return formatModelTotal(manifest);
 }
 

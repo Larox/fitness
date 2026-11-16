@@ -7,6 +7,37 @@ import { deleteMediaBlob, writeMediaBlob } from "../media/file-store";
 import type { ExerciseMediaMeta, PoseMeta } from "../media/types";
 import { poseFileKey } from "./pose-keys";
 
+export async function writePendingPoseFile(
+  mediaId: string,
+  blob: Blob,
+  poseMeta: Omit<PoseMeta, "key" | "bytes">,
+): Promise<PoseMeta> {
+  const key = poseFileKey(mediaId);
+  await writeMediaBlob(key, blob);
+  return {
+    ...poseMeta,
+    key,
+    bytes: blob.size,
+  };
+}
+
+export async function commitDraftPoseToSavedMedia(
+  exerciseId: string,
+  mediaId: string,
+  pose: PoseMeta,
+): Promise<boolean> {
+  const meta = await getMediaByExerciseId(exerciseId);
+  if (!meta || meta.id !== mediaId || meta.kind !== "clip") {
+    return false;
+  }
+  const next: ExerciseMediaMeta = {
+    ...meta,
+    pose,
+  };
+  await replaceMediaMetaForExercise(exerciseId, next, null);
+  return true;
+}
+
 export async function attachPoseToMedia(
   exerciseId: string,
   mediaId: string,

@@ -4,12 +4,14 @@ import type { NormalizedExercise } from "../library/types";
 import { escapeHtml, ICONS } from "../setup/icons";
 import { createUserExerciseId, createUserRoutineId } from "./ids";
 import {
+  applyPendingPoseFromJob,
   cancelMediaImport,
   commitMediaForSave,
   commitPendingMediaListRemove,
   createMediaFlowState,
   discardUnsavedMedia,
   hydrateMediaDraft,
+  isMediaFormDirty,
   loadMyExerciseThumbs,
   markRemove,
   mediaAttachHtml,
@@ -21,7 +23,6 @@ import {
   undoRemove,
   type MediaFlowState,
 } from "./exercise-media-flow";
-import { isMediaDraftDirty } from "../media/draft";
 import { loadMediaSettings, saveMediaSettings } from "../media/meta-store";
 import { listMediaMeta } from "../media/service";
 import type { ExerciseMediaMeta } from "../media/types";
@@ -125,12 +126,16 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     mediaState.poseJob = job;
     void (async () => {
       if (job?.phase === "ready") {
-        const meta = await getExerciseMedia(job.exerciseId);
-        if (meta && mediaState.draft.display?.id === meta.id) {
-          mediaState.draft.display = meta;
-          mediaState.draft.saved = meta;
-          mediaState.unfinishedAnim = false;
-          await clearUnfinishedFlag(job.exerciseId);
+        if (job.pendingPose && mediaState.draft.display?.id === job.mediaId) {
+          applyPendingPoseFromJob(mediaState, job.mediaId, job.pendingPose);
+        } else {
+          const meta = await getExerciseMedia(job.exerciseId);
+          if (meta && mediaState.draft.display?.id === meta.id) {
+            mediaState.draft.display = meta;
+            mediaState.draft.saved = meta;
+            mediaState.unfinishedAnim = false;
+            await clearUnfinishedFlag(job.exerciseId);
+          }
         }
       }
       if (view === "form" || view === "library") {
@@ -458,7 +463,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
 
   function renderBar(): void {
     if (view === "form" || view === "library") {
-      const mediaDirty = isMediaDraftDirty(mediaState.draft);
+      const mediaDirty = isMediaFormDirty(mediaState);
       const importing = mediaState.draft.status === "uploading";
       const dirty =
         view === "library"

@@ -3,6 +3,7 @@ import type { PoseDetector } from "./detect";
 export interface PoseModelUrls {
   wasmBaseUrl: string;
   modelUrl: string;
+  revoke?: () => void;
 }
 
 /**
@@ -13,6 +14,7 @@ export async function createMediapipePoseDetector(urls: PoseModelUrls): Promise<
   const { FilesetResolver, PoseLandmarker } = vision;
   type Landmarker = Awaited<ReturnType<typeof PoseLandmarker.createFromOptions>>;
   let landmarker: Landmarker | null = null;
+  const revoke = urls.revoke;
 
   async function make(delegate: "GPU" | "CPU"): Promise<Landmarker> {
     const fileset = await FilesetResolver.forVisionTasks(urls.wasmBaseUrl);
@@ -52,6 +54,7 @@ export async function createMediapipePoseDetector(urls: PoseModelUrls): Promise<
     close() {
       landmarker?.close();
       landmarker = null;
+      revoke?.();
     },
   };
 }

@@ -6,7 +6,11 @@ import {
   type PoseJobState,
 } from "../pose/pose-job-service";
 import { loadMediaSettings } from "../media/meta-store";
-import { clearPoseFromMeta } from "../pose/pose-persist";
+import {
+  clearPoseFromMeta,
+  commitDraftPoseToSavedMedia,
+  deletePoseOrphan,
+} from "../pose/pose-persist";
 import { cancelPoseJob } from "../pose/pose-job-service";
 import {
   emptyMediaDraft,
@@ -30,7 +34,7 @@ import {
   putMediaMeta,
   summarizeMediaUsage,
 } from "../media/service";
-import type { ExerciseMediaMeta, MediaImportError } from "../media/types";
+import type { ExerciseMediaMeta, MediaImportError, PoseMeta } from "../media/types";
 
 export interface MediaFlowState {
   draft: MediaFormDraft;
@@ -42,6 +46,7 @@ export interface MediaFlowState {
   poseJob: PoseJobState | null;
   formAnimView: "anim" | "clip";
   poseRemoveDraft: boolean;
+  pendingPoseOnDraft: boolean;
   modelOnDevice: boolean;
   unfinishedAnim: boolean;
   exerciseName: string;
@@ -59,6 +64,7 @@ export function createMediaFlowState(exerciseId: string): MediaFlowState {
     poseJob: getPoseJob(),
     formAnimView: "anim",
     poseRemoveDraft: false,
+    pendingPoseOnDraft: false,
     modelOnDevice: false,
     unfinishedAnim: false,
     exerciseName: "this exercise",
@@ -79,6 +85,7 @@ export async function hydrateMediaDraft(
   const saved = await getExerciseMedia(exerciseId);
   state.draft = loadMediaDraft(exerciseId, saved);
   state.poseRemoveDraft = false;
+  state.pendingPoseOnDraft = false;
   state.formAnimView = "anim";
   const settings = await loadMediaSettings();
   state.unfinishedAnim = Boolean(settings.unfinishedAnim?.[exerciseId]);
@@ -96,6 +103,21 @@ export async function refreshMediaPoster(state: MediaFlowState): Promise<void> {
   if (blob) {
     state.posterUrl = URL.createObjectURL(blob);
   }
+}
+
+export function isPoseMediaDirty(state: MediaFlowState): boolean {
+  if (state.poseRemoveDraft) return true;
+  if (state.pendingPoseOnDraft) return true;
+  const display = state.draft.display;
+  const saved = state.draft.saved;
+  if (display?.pose && (!saved || !saved.pose)) {
+    return true;
+  }
+  return false;
+}
+
+export function isMediaFormDirty(state: MediaFlowState): boolean {
+  return isMediaDraftDirty(state.draft) || isPoseMediaDirty(state);
 }
 
 export function mediaAttachHtml(
@@ -123,7 +145,7 @@ export function mediaAttachHtml(
     };
   }
   return renderMediaAttachSection(state.draft, {
-    changedDot: isMediaDraftDirty(state.draft) || state.poseRemoveDraft,
+    changedDot: isMediaFormDirty(state),
     posterUrl: state.posterUrl ?? undefined,
     removedStatus: state.draft.removeDraft && !state.draft.display,
     removedHasAnimation: state.draft.removedHadPose,
@@ -149,12 +171,23 @@ export async function loadMyExerciseThumbs(state: MediaFlowState): Promise<void>
   state.mediaUsageText = `${summary.itemCount} items · ${formatMegabytes(summary.bytesUsed)} on this phone`;
 }
 
+export function applyPendingPoseFromJob(
+  state: MediaFlowState,
+  mediaId: string,
+  pose: PoseMeta,
+): void {
+  if (state.draft.display?.id !== mediaId) return;
+  state.draft.display = { ...state.draft.display, pose };
+  state.pendingPoseOnDraft = true;
+}
+
 export async function startMediaImport(
   state: MediaFlowState,
   file: File,
   onChange: () => void,
 ): Promise<void> {
   void cancelPoseJob();
+  state.pendingPoseOnDraft = false;
   state.abort?.abort();
   const controller = new AbortController();
   state.abort = controller;
@@ -235,6 +268,11 @@ export async function commitMediaForSave(
   state: MediaFlowState,
   exerciseId: string,
 ): Promise<void> {
+  const draftPose = state.pendingPoseOnDraft ? (state.draft.display?.pose ?? null) : null;
+  const draftPoseMediaId = state.pendingPoseOnDraft
+    ? (state.draft.pending?.id ?? state.draft.display?.id ?? null)
+    : null;
+
   await commitPoseRemoveForSave(state, exerciseId);
   if (state.draft.removeDraft) {
     const saved = state.draft.saved;
@@ -264,9 +302,29 @@ export async function commitMediaForSave(
     state.draft.replaced = null;
   }
   state.draft.removeDraft = false;
+  if (draftPose && draftPoseMediaId && state.pendingPoseOnDraft) {
+    const ok = await commitDraftPoseToSavedMedia(exerciseId, draftPoseMediaId, draftPose);
+    if (ok) {
+      const saved = await getExerciseMedia(exerciseId);
+      if (saved) {
+        state.draft.saved = saved;
+        state.draft.display = saved;
+      }
+      state.pendingPoseOnDraft = false;
+    }
+  }
 }
 
 export async function discardUnsavedMedia(state: MediaFlowState): Promise<void> {
+  if (state.pendingPoseOnDraft && state.draft.display?.pose?.key) {
+    await deletePoseOrphan(state.draft.display.pose.key);
+    state.pendingPoseOnDraft = false;
+    if (state.draft.display.pose) {
+      const { pose: _p, ...rest } = state.draft.display;
+      void _p;
+      state.draft.display = rest as ExerciseMediaMeta;
+    }
+  }
   if (state.draft.pending) {
     await discardPendingMedia(state.draft.pending);
   }

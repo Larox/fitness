@@ -65,12 +65,17 @@ function attachedPreview(
         <button type="button" data-act="media-remove" class="danger">Remove</button>
       </div>`;
   }
-  if (anim?.showToggle && anim.view === "anim" && m.pose) {
+  if (anim?.showToggle && m.pose) {
     return renderAnimSection(anim);
   }
   const job = anim?.job;
   const processing =
     job?.mediaId === m.id && job.phase === "processing";
+  const downloading =
+    job?.mediaId === m.id && job.phase === "downloading";
+  if ((processing || downloading) && anim) {
+    return renderAnimSection(anim);
+  }
   const dur = formatDurationMmSs(m.durationS ?? 0);
   const frame = processing
     ? ""
