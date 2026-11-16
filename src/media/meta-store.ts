@@ -89,7 +89,12 @@ export async function replaceMediaMetaForExercise(
   for (const id of drop) {
     store.delete(id);
   }
-  store.put({ ...next, exerciseId });
+  try {
+    store.put({ ...next, exerciseId });
+  } catch (err) {
+    tx.abort();
+    throw err;
+  }
   await new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error ?? new Error("idb-write-failed"));
