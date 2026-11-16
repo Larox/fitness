@@ -14,7 +14,11 @@ import type { PersistedAppState } from "../setup/types";
 import type { SettingsStorage } from "../setup/storage";
 import { buildTodayChangeNotes } from "./change-notes";
 import { normalizeCues } from "./cues";
-import { markSessionCompleted, unmarkSessionCompleted } from "./completion";
+import {
+  markSessionCompleted,
+  sessionCompletionSummary,
+  unmarkSessionCompleted,
+} from "./completion";
 import { formatScheduledDose } from "./dose-label";
 import { exerciseUsesKettlebell } from "./kettlebell";
 import { moderateCautionBanner } from "./moderate-caution";
@@ -25,10 +29,22 @@ import {
   renderSetLogsEditor,
   toggleSetSkipped,
 } from "./set-editor";
-import { defaultSetLogsForScheduled, scheduledUsesHold } from "./set-logs";
-import { deleteSessionLog, saveSessionLog } from "./session-log-store";
+import {
+  defaultSetLogsForScheduled,
+  normalizeExerciseSetLogs,
+  scheduledUsesHold,
+} from "./set-logs";
+import {
+  buildSessionDraftId,
+  deleteSessionDraft,
+  getSessionDraft,
+  saveSessionDraft,
+  type SessionDraftCardState,
+} from "./session-draft-store";
+import { getSessionLog, deleteSessionLog, saveSessionLog } from "./session-log-store";
+import { resolveSavedSessionLogId, sessionLogId } from "./session-restore";
 import type { ExerciseSessionLog, SessionLogRecord } from "./types";
-import { formatTodayOverline, weekPlanDayIndex } from "./weekday";
+import { formatTodayOverline, weekPlanDayIndex, weekStartKey } from "./weekday";
 
 interface CardState {
   expanded: boolean;
@@ -46,10 +62,6 @@ export interface MountTodayScreenOptions {
   routineSourceById: ReadonlyMap<string, string | undefined>;
   onOpenSettings: () => void;
   now?: () => Date;
-}
-
-function sessionLogId(sessionId: string, completedAt: string): string {
-  return `${sessionId}:${completedAt}`;
 }
 
 export function mountTodayScreen(options: MountTodayScreenOptions): {
@@ -73,6 +85,102 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
   let savedAt: string | null = null;
   let savedLogId: string | null = null;
   let cards: Record<string, CardState> = {};
+  let draftRestored = false;
+  let completionHydrated = false;
+  let draftFlushScheduled = false;
+
+  function currentWeekStart(): string {
+    return weekStartKey(now());
+  }
+
+  function flushSessionDraft(): void {
+    const row = todayRow();
+    const session = todaySession();
+    if (!row || !session || sessionSaved) {
+      return;
+    }
+    const week = currentWeekStart();
+    const draftCards: Record<string, SessionDraftCardState> = {};
+    for (const sched of session.scheduled) {
+      const state = cards[sched.exerciseId];
+      if (!state) {
+        continue;
+      }
+      draftCards[sched.exerciseId] = {
+        expanded: state.expanded,
+        done: state.done,
+        hurt: state.hurt,
+        bellKg: state.bellKg,
+        setLogs: state.setLogs.map((log) => ({ ...log })),
+      };
+    }
+    void saveSessionDraft({
+      id: buildSessionDraftId(week, row.sessionId),
+      sessionId: row.sessionId,
+      weekStart: week,
+      dayIndex: row.dayIndex,
+      updatedAt: now().toISOString(),
+      cards: draftCards,
+    });
+  }
+
+  async function hydrateSessionState(
+    row: WeekPlanRow,
+    session: WeekPlanSessionResult,
+  ): Promise<void> {
+    const week = currentWeekStart();
+    const existing = sessionCompletionSummary(
+      persisted.completedSessions,
+      row.sessionId,
+      week,
+    );
+    if (existing) {
+      sessionSaved = true;
+      savedAt = existing.completedAt;
+      savedLogId = await resolveSavedSessionLogId(row.sessionId, existing.completedAt);
+      const log = savedLogId ? await getSessionLog(savedLogId) : null;
+      if (log) {
+        for (const entry of log.exercises) {
+          const sched = session.scheduled.find((s) => s.exerciseId === entry.exerciseId);
+          cards[entry.exerciseId] = {
+            expanded: false,
+            done: entry.done,
+            hurt: entry.hurt,
+            bellKg: entry.bellKg,
+            setLogs: normalizeExerciseSetLogs(entry, sched),
+          };
+        }
+      }
+      completionHydrated = true;
+      return;
+    }
+
+    const draft = await getSessionDraft(week, row.sessionId).catch(() => null);
+    if (!draft) {
+      return;
+    }
+    for (const [exerciseId, state] of Object.entries(draft.cards)) {
+      cards[exerciseId] = {
+        expanded: state.expanded,
+        done: state.done,
+        hurt: state.hurt,
+        bellKg: state.bellKg,
+        setLogs: state.setLogs.map((log) => ({ ...log })),
+      };
+    }
+    draftRestored = true;
+  }
+
+  function scheduleDraftFlush(): void {
+    if (draftFlushScheduled) {
+      return;
+    }
+    draftFlushScheduled = true;
+    queueMicrotask(() => {
+      draftFlushScheduled = false;
+      flushSessionDraft();
+    });
+  }
 
   function todayRow(): WeekPlanRow | undefined {
     const plan = persisted.weekPlan;
@@ -107,7 +215,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
     const firstOpen = session.scheduled.find(
       (row) => !cards[row.exerciseId]?.done && !cards[row.exerciseId]?.hurt,
     );
-    if (firstOpen && !sessionSaved) {
+    if (firstOpen && !sessionSaved && !draftRestored && !completionHydrated) {
       cards[firstOpen.exerciseId]!.expanded = true;
     }
   }
@@ -259,12 +367,6 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
         <button type="button" class="today-settings-link" data-act="today-settings">Open settings</button>`;
       bar.innerHTML = "";
       return;
-    }
-
-    const existing = persisted.completedSessions?.[row.sessionId];
-    if (existing && !sessionSaved) {
-      sessionSaved = true;
-      savedAt = existing.completedAt;
     }
 
     ensureCards(session);
@@ -435,6 +537,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
           cards[sched.exerciseId]!.expanded = sched.exerciseId === exerciseId;
         }
         render();
+        scheduleDraftFlush();
         break;
       case "today-done":
         if (!exerciseId || sessionSaved) {
@@ -447,6 +550,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
           openNextUnresolved(exerciseId, session);
         }
         render();
+        scheduleDraftFlush();
         break;
       case "today-hurt":
         if (!exerciseId) {
@@ -469,6 +573,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
           }
         }
         render();
+        scheduleDraftFlush();
         break;
       case "today-bell":
         if (!exerciseId || sessionSaved) {
@@ -482,6 +587,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
           bells[exerciseId] = kg;
           persist({ ...persisted, exerciseBellKg: bells });
           render();
+          scheduleDraftFlush();
         }
         break;
       case "today-set-inc":
@@ -506,6 +612,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
         const delta = act === "today-set-inc" ? 1 : -1;
         card.setLogs = applySetMetric(card.setLogs, setIndex, schedRow, metric + delta);
         render();
+        scheduleDraftFlush();
         break;
       }
       case "today-set-skip": {
@@ -519,6 +626,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
         }
         card.setLogs = toggleSetSkipped(card.setLogs, setIndex);
         render();
+        scheduleDraftFlush();
         break;
       }
       case "today-save": {
@@ -533,8 +641,10 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
         sessionSaved = true;
         savedAt = completedAt;
         void saveSessionLog(log);
+        const week = currentWeekStart();
+        void deleteSessionDraft(buildSessionDraftId(week, row.sessionId));
         persist(
-          markSessionCompleted(persisted, row.sessionId, { completedAt, partial }),
+          markSessionCompleted(persisted, row.sessionId, week, { completedAt, partial }),
         );
         window.scrollTo({ top: 0, behavior: "smooth" });
         render();
@@ -547,7 +657,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
         sessionSaved = false;
         savedAt = null;
         savedLogId = null;
-        persist(unmarkSessionCompleted(persisted, row.sessionId));
+        persist(unmarkSessionCompleted(persisted, row.sessionId, currentWeekStart()));
         render();
         break;
       }
@@ -587,14 +697,23 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
       schedRow,
       clampSetMetric(Number(target.value), scheduledUsesHold(schedRow)),
     );
+    scheduleDraftFlush();
   }
 
   document.addEventListener("click", handleClick);
   document.addEventListener("input", handleInput);
-  render();
+  void (async () => {
+    const row = todayRow();
+    const session = todaySession();
+    if (row && session) {
+      await hydrateSessionState(row, session);
+    }
+    render();
+  })();
 
   return {
     destroy: () => {
+      flushSessionDraft();
       document.removeEventListener("click", handleClick);
       document.removeEventListener("input", handleInput);
       mediaPreview?.destroy();

@@ -116,6 +116,7 @@ export async function bootApp(root: HTMLElement): Promise<void> {
       hurtExerciseCount: counts.hurt,
       onOpenMyExercises: () => showExercises("my"),
       onOpenHurtList: () => showExercises("hurt"),
+      onBackToToday: () => showToday(),
       onSaved: (state) => {
         if (state.setupComplete && state.weekPlan) {
           showToday();
