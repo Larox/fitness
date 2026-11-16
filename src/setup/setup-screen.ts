@@ -114,12 +114,61 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
   document.body.appendChild(bar);
   document.body.appendChild(layer);
 
+  let refocusDisclaimerRow = false;
+
+  function focusRestoreKey(element: HTMLElement): string | null {
+    const interactive = element.closest<HTMLElement>("[data-act]");
+    if (interactive?.dataset.act) {
+      const act = interactive.dataset.act;
+      const value = interactive.dataset.v;
+      return value !== undefined ? `${act}:${value}` : act;
+    }
+    return element.id ? `#${element.id}` : null;
+  }
+
+  function captureFocus(): string | null {
+    const active = document.activeElement;
+    if (!(active instanceof HTMLElement)) {
+      return null;
+    }
+    if (!root.contains(active) && !bar.contains(active) && !layer.contains(active)) {
+      return null;
+    }
+    return focusRestoreKey(active);
+  }
+
+  function restoreFocus(key: string | null): void {
+    if (refocusDisclaimerRow) {
+      refocusDisclaimerRow = false;
+      root.querySelector<HTMLElement>('[data-act="open-disclaimer"]')?.focus();
+      return;
+    }
+    if (!key) {
+      return;
+    }
+    if (key.startsWith("#")) {
+      document.getElementById(key.slice(1))?.focus();
+      return;
+    }
+    const colon = key.indexOf(":");
+    const act = colon === -1 ? key : key.slice(0, colon);
+    const value = colon === -1 ? undefined : key.slice(colon + 1);
+    const selector =
+      value !== undefined
+        ? `[data-act="${act}"][data-v="${CSS.escape(value)}"]`
+        : `[data-act="${act}"]`;
+    const scope =
+      act === "save" ? bar : act === "ack-disclaimer" || act === "close-disclaimer" ? layer : root;
+    scope.querySelector<HTMLElement>(selector)?.focus();
+  }
+
   function persist(next: PersistedAppState): void {
     persisted = next;
     storage.save(next);
   }
 
   function render(): void {
+    const focusKey = captureFocus();
     const ackLabel = formatAcknowledgedDate(persisted.disclaimerAckAt);
     const isSetupMode = screen.mode === "setup";
     const gymDefault = arraysEqualSorted(
@@ -244,6 +293,8 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
     if (sheetOpen) {
       const sheet = layer.querySelector<HTMLElement>(".sheet");
       sheet?.focus();
+    } else {
+      restoreFocus(focusKey);
     }
   }
 
@@ -305,6 +356,7 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
         break;
       case "close-disclaimer":
         screen.sheet = null;
+        refocusDisclaimerRow = true;
         break;
       case "save": {
         if (needsDisclaimerAcknowledgement(persisted, config)) {
@@ -334,6 +386,7 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
   function handleKeydown(event: KeyboardEvent): void {
     if (event.key === "Escape" && screen.sheet === "readonly") {
       screen.sheet = null;
+      refocusDisclaimerRow = true;
       render();
     }
   }

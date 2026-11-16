@@ -15,6 +15,18 @@ export function clampDaysPerWeek(value: number): number {
   return Math.min(DAYS_PER_WEEK_MAX, Math.max(DAYS_PER_WEEK_MIN, rounded));
 }
 
+/** Stored values outside 2–5 fall back to the default (e.g. stale 6 days). */
+export function normalizeDaysPerWeek(value: number): number {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_DAYS_PER_WEEK;
+  }
+  const rounded = Math.round(value);
+  if (rounded < DAYS_PER_WEEK_MIN || rounded > DAYS_PER_WEEK_MAX) {
+    return DEFAULT_DAYS_PER_WEEK;
+  }
+  return rounded;
+}
+
 export function isValidSessionMinutes(
   value: number,
 ): value is SessionLengthMinutes {
