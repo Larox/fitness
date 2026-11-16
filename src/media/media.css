@@ -1,0 +1,336 @@
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.exercise-shell .changed-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.exercise-shell .media-add {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  padding: 12px;
+  border: 2px dashed var(--border-strong);
+  border-radius: 12px;
+  background: var(--bg);
+  text-align: left;
+}
+
+.exercise-shell .media-add b {
+  display: block;
+  font-size: 17px;
+  color: var(--primary);
+}
+
+.exercise-shell .media-add span span {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.exercise-shell .media-add-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary-tint);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.exercise-shell .media-frame {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.exercise-shell .media-cover,
+.today-media .media-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.exercise-shell .media-meta,
+.exercise-shell .media-import-meta {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 8px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.exercise-shell .media-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.exercise-shell .media-actions button {
+  min-height: 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  background: #fff;
+}
+
+.exercise-shell .media-actions button.danger {
+  color: var(--danger);
+}
+
+.exercise-shell .media-err {
+  background: var(--danger-tint);
+  border-left: 4px solid var(--danger);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+
+.exercise-shell .media-err p {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.exercise-shell .media-import-track {
+  height: 6px;
+  background: var(--track);
+  border-radius: 3px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.exercise-shell .media-import-track i {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+}
+
+.exercise-shell .media-cancel {
+  min-height: 44px;
+  margin-top: 8px;
+  border: 1px solid var(--primary);
+  border-radius: 12px;
+  padding: 0 16px;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.exercise-shell .media-removed {
+  background: var(--surface-2);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.exercise-shell .media-removed button {
+  min-height: 44px;
+  color: var(--primary);
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.exercise-shell .media-duration-badge {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 0 8px;
+  height: 24px;
+  border-radius: 999px;
+  background: #1b1f1dcc;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.exercise-shell .list-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  margin-right: 12px;
+  flex: none;
+  background: var(--surface-2);
+}
+
+.exercise-shell .lib-note {
+  background: var(--info-tint);
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin: 12px 0;
+  font-size: 15px;
+}
+
+.exercise-shell .readonly-dl {
+  margin: 0;
+}
+
+.exercise-shell .readonly-dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+
+.exercise-shell .readonly-dl dt {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.exercise-shell .usage-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--track);
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.exercise-shell .usage-bar i {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+}
+
+.exercise-shell .usage-bar.danger i {
+  background: var(--danger);
+}
+
+.media-missing {
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--surface-2);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.today-media {
+  position: relative;
+  margin: 0 0 16px;
+}
+
+.media-photo-open {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+}
+
+.media-expand {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #1b1f1dad;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.media-clip-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  border-radius: 50%;
+  background: #ffffffeb;
+  color: var(--primary);
+  font-size: 24px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 12px #1b1f1d40;
+}
+
+.media-clip-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: linear-gradient(transparent, #1b1f1db3);
+}
+
+.media-clip-controls button {
+  min-width: 44px;
+  min-height: 44px;
+  color: #fff;
+  border-radius: 50%;
+}
+
+.media-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--text);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.media-dialog-inner {
+  display: contents;
+}
+
+.media-dialog-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  color: #fff;
+}
+
+.media-dialog-bar button {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  background: #ffffff26;
+  color: #fff;
+  font-size: 24px;
+}
+
+.media-dialog img {
+  width: 100%;
+  max-height: calc(100vh - 120px);
+  object-fit: contain;
+  align-self: center;
+}
+
+.media-dialog-hint {
+  text-align: center;
+  color: #ffffffc7;
+  font-size: 13px;
+  padding: 16px;
+}
