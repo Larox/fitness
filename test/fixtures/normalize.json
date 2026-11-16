@@ -10,10 +10,10 @@
         "reps": 1,
         "cues": ["line one", "line two"],
         "concern_a_risk": "low",
-        "knee_risk": "moderate"
+        "concern_b_risk": "moderate"
       }
     ],
     "concern_a_risk": "low",
-    "knee_risk": "low"
+    "concern_b_risk": "low"
   }
 ]

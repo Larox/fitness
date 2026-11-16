@@ -1,0 +1,17 @@
+{
+  "libraryPath": "data/sample-library.json",
+  "overlayPath": "data/overlay.json",
+  "conditions": [
+    {
+      "id": "concern_a",
+      "label": "Concern A",
+      "libraryField": "concern_a_risk"
+    },
+    {
+      "id": "concern_b",
+      "label": "Concern B",
+      "libraryField": "concern_b_risk"
+    }
+  ],
+  "disclaimerContact": "A licensed clinician familiar with your health history"
+}

@@ -1,9 +1,11 @@
+import type { ConditionConfig } from "../config/types";
+
 /** Risk tier used by the coach (slice 2+). Missing source data is normalized to high. */
 export type RiskLevel = "low" | "moderate" | "high";
 
 export type SessionLocation = "home" | "gym";
 
-/** Fields the Leeds snapshot does not carry; keyed by exercise ID in overlay.json. */
+/** Fields the library export does not carry; keyed by exercise ID in overlay.json. */
 export interface ExerciseOverlayEntry {
   swap_to?: string;
   max_reps?: number;
@@ -26,7 +28,7 @@ export interface DurationMin {
   max: number | null;
 }
 
-/** Raw routine shape from the read-only snapshot (import boundary only). */
+/** Raw routine shape from the library JSON (import boundary only). */
 export interface SnapshotRoutine {
   id: string;
   source?: string;
@@ -40,8 +42,6 @@ export interface SnapshotRoutine {
   difficulty?: string | null;
   notes?: string;
   exercises?: SnapshotExercise[];
-  concern_a_risk?: RiskLevel;
-  knee_risk?: RiskLevel;
 }
 
 export interface SnapshotExercise {
@@ -51,8 +51,6 @@ export interface SnapshotExercise {
   equipment?: string | null;
   cues?: string | string[] | null;
   caution?: string;
-  concern_a_risk?: RiskLevel;
-  knee_risk?: RiskLevel;
 }
 
 export interface NormalizedExercise {
@@ -64,8 +62,7 @@ export interface NormalizedExercise {
   equipment: string | null;
   cues: string[];
   caution?: string;
-  concernARisk: RiskLevel;
-  kneeRisk: RiskLevel;
+  conditionRisks: Record<string, RiskLevel>;
   overlay?: ExerciseOverlayEntry;
 }
 
@@ -79,8 +76,7 @@ export interface NormalizedRoutine {
   durationMin: DurationMin | null;
   difficulty: string | null;
   notes?: string;
-  concernARisk: RiskLevel;
-  kneeRisk: RiskLevel;
+  conditionRisks: Record<string, RiskLevel>;
   exerciseIds: string[];
 }
 
@@ -88,6 +84,10 @@ export interface SkippedRoutine {
   routineId: string;
   title: string;
   reason: string;
+}
+
+export interface LibraryImportOptions {
+  conditions: ConditionConfig[];
 }
 
 export interface LibraryImportResult {

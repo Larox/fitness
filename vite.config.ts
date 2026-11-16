@@ -9,7 +9,7 @@ export default defineConfig({
       manifest: {
         name: "Fitness",
         short_name: "Fitness",
-        description: "Private personal fitness coach (PWA)",
+        description: "Offline fitness coach (PWA)",
         theme_color: "#24456b",
         background_color: "#f4f3ef",
         display: "standalone",

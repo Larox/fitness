@@ -1,25 +1,31 @@
 import { deriveExerciseId } from "./exercise-id";
 import {
-  aggregateRoutineRisk,
+  aggregateRoutineRisks,
   normalizeCategories,
   normalizeCues,
   normalizeDurationMin,
   normalizeRisk,
+  readRoutineLibraryRisk,
 } from "./normalize";
+import { readLibraryRisk } from "./risk";
 import type {
   ExerciseOverlayFile,
+  LibraryImportOptions,
   LibraryImportResult,
   NormalizedExercise,
   NormalizedRoutine,
+  RiskLevel,
+  SkippedRoutine,
   SnapshotExercise,
   SnapshotRoutine,
-  SkippedRoutine,
 } from "./types";
 
 export function importLibrary(
   snapshot: SnapshotRoutine[],
+  options: LibraryImportOptions,
   overlay: ExerciseOverlayFile = {},
 ): LibraryImportResult {
+  const { conditions } = options;
   const routines: NormalizedRoutine[] = [];
   const exercises: NormalizedExercise[] = [];
   const skipped: SkippedRoutine[] = [];
@@ -61,20 +67,25 @@ export function importLibrary(
     }
 
     const normalizedExercises: NormalizedExercise[] = [];
-    const exerciseConcernA: ReturnType<typeof normalizeRisk>[] = [];
-    const exerciseKnee: ReturnType<typeof normalizeRisk>[] = [];
-
-    for (const ex of rawExercises) {
-      const normalized = normalizeExercise(routine.id, ex, overlay);
-      normalizedExercises.push(normalized);
-      exerciseConcernA.push(normalized.concernARisk);
-      exerciseKnee.push(normalized.kneeRisk);
+    const exerciseRisksByCondition: Record<string, RiskLevel[]> = {};
+    for (const condition of conditions) {
+      exerciseRisksByCondition[condition.id] = [];
     }
 
-    const { concernARisk, kneeRisk } = aggregateRoutineRisk(
-      routine,
-      exerciseConcernA,
-      exerciseKnee,
+    for (const ex of rawExercises) {
+      const normalized = normalizeExercise(routine.id, ex, conditions, overlay);
+      normalizedExercises.push(normalized);
+      for (const condition of conditions) {
+        exerciseRisksByCondition[condition.id]!.push(
+          normalized.conditionRisks[condition.id]!,
+        );
+      }
+    }
+
+    const conditionRisks = aggregateRoutineRisks(
+      conditions,
+      exerciseRisksByCondition,
+      (libraryField) => readRoutineLibraryRisk(routine, libraryField),
     );
 
     routines.push({
@@ -87,8 +98,7 @@ export function importLibrary(
       durationMin: normalizeDurationMin(routine.duration_min),
       difficulty: routine.difficulty ?? null,
       notes: routine.notes,
-      concernARisk,
-      kneeRisk,
+      conditionRisks,
       exerciseIds: normalizedExercises.map((e) => e.id),
     });
 
@@ -101,10 +111,19 @@ export function importLibrary(
 function normalizeExercise(
   routineId: string,
   ex: SnapshotExercise,
+  conditions: LibraryImportOptions["conditions"],
   overlay: ExerciseOverlayFile,
 ): NormalizedExercise {
   const id = deriveExerciseId(routineId, ex.name);
   const overlayEntry = overlay[id];
+  const snapshotRecord = ex as unknown as Record<string, unknown>;
+
+  const conditionRisks: Record<string, RiskLevel> = {};
+  for (const condition of conditions) {
+    conditionRisks[condition.id] = normalizeRisk(
+      readLibraryRisk(snapshotRecord, condition.libraryField),
+    );
+  }
 
   return {
     id,
@@ -115,8 +134,7 @@ function normalizeExercise(
     equipment: ex.equipment ?? null,
     cues: normalizeCues(ex.cues),
     caution: ex.caution,
-    concernARisk: normalizeRisk(ex.concern_a_risk),
-    kneeRisk: normalizeRisk(ex.knee_risk),
+    conditionRisks,
     overlay: overlayEntry,
   };
 }
