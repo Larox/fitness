@@ -38,6 +38,10 @@ export interface MountSetupScreenOptions {
   root: HTMLElement;
   /** Called after a successful save (start training or settings save). */
   onSaved?: (state: PersistedAppState, summary: ReturnType<typeof summarizeSettingsChange>) => void;
+  myExerciseCount?: number;
+  hurtExerciseCount?: number;
+  onOpenMyExercises?: () => void;
+  onOpenHurtList?: () => void;
 }
 
 function cloneSettings(settings: TrainingSettings): TrainingSettings {
@@ -93,8 +97,9 @@ function renderBellChips(
 
 export function mountSetupScreen(options: MountSetupScreenOptions): {
   getState: () => PersistedAppState;
+  destroy: () => void;
 } {
-  const { config, storage, root, onSaved } = options;
+  const { config, storage, root, onSaved, myExerciseCount = 0, hurtExerciseCount = 0, onOpenMyExercises, onOpenHurtList } = options;
 
   let persisted = mergePersistedState(storage.load(), config);
   const saved = cloneSettings(persisted.settings);
@@ -237,6 +242,17 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
         : ""
     }`;
 
+    if (!isSetupMode && (onOpenMyExercises || onOpenHurtList)) {
+      html += `<div class="sect"><h2>Library</h2></div><div class="group">`;
+      if (onOpenMyExercises) {
+        html += `<button type="button" class="nrow" data-act="open-my-exercises"><span class="txt"><span class="lb">My exercises</span><span class="ds">${myExerciseCount} added</span></span><span class="chev">${ICONS.chev}</span></button>`;
+      }
+      if (onOpenHurtList) {
+        html += `<button type="button" class="nrow" data-act="open-hurt-list"><span class="txt"><span class="lb">Marked as hurt</span><span class="ds">${hurtExerciseCount} kept out of plans</span></span><span class="chev">${ICONS.chev}</span></button>`;
+      }
+      html += `</div>`;
+    }
+
     const contact = config.disclaimerContact
       ? escapeHtml(config.disclaimerContact)
       : "your clinician";
@@ -358,6 +374,12 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
         screen.sheet = null;
         refocusDisclaimerRow = true;
         break;
+      case "open-my-exercises":
+        onOpenMyExercises?.();
+        return;
+      case "open-hurt-list":
+        onOpenHurtList?.();
+        return;
       case "save": {
         if (needsDisclaimerAcknowledgement(persisted, config)) {
           screen.sheet = "blocking";
@@ -397,6 +419,14 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
 
   return {
     getState: () => persisted,
+    destroy: () => {
+      document.removeEventListener("click", handleClick);
+      document.removeEventListener("keydown", handleKeydown);
+      bar.remove();
+      layer.remove();
+      root.innerHTML = "";
+      root.className = "";
+    },
   };
 }
 
