@@ -147,7 +147,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   void (async () => {
     const manifest = await loadPoseModelManifest({ poseModelBaseUrl: poseBaseUrl });
     if (manifest) mediaState.manifestLabel = formatModelTotal(manifest);
-    mediaState.modelOnDevice = await isModelOnDevice();
+    mediaState.modelOnDevice = await isModelOnDevice({ poseModelBaseUrl: poseBaseUrl });
   })();
 
   function exerciseName(exerciseId: string): string {
@@ -168,7 +168,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     void clearPoseModelCache().then(async () => {
       const st = await loadMediaSettings();
       await saveMediaSettings({ ...st, poseModelReady: false });
-      mediaState.modelOnDevice = await isModelOnDevice();
+      mediaState.modelOnDevice = await isModelOnDevice({ poseModelBaseUrl: poseBaseUrl });
     });
   }
 
@@ -533,7 +533,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   async function openExerciseMedia(exerciseId: string): Promise<void> {
     mediaSaveError = null;
     mediaState.exerciseName = exerciseName(exerciseId);
-    await hydrateMediaDraft(mediaState, exerciseId);
+    await hydrateMediaDraft(mediaState, exerciseId, poseBaseUrl);
     render();
   }
 

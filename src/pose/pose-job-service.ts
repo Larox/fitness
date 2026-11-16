@@ -105,6 +105,7 @@ export async function startPoseJob(
   abort?.abort();
   abort = new AbortController();
   const signal = abort.signal;
+  const base = config.poseModelBaseUrl.replace(/\/$/, "");
   let manifest = await loadPoseModelManifest(config);
   if (!manifest && modelCached) {
     const bytes = await poseModelCachedBytes();
@@ -118,7 +119,10 @@ export async function startPoseJob(
     setJob({ phase: "offline", exerciseId: meta.exerciseId, mediaId: meta.id });
     return;
   }
-  const base = config.poseModelBaseUrl.replace(/\/$/, "");
+  const modelReady =
+    modelCached && manifest.files.length > 0
+      ? await isPoseModelCached(manifest, base)
+      : false;
   const settings = await loadMediaSettings();
   await saveMediaSettings({
     ...settings,
@@ -126,7 +130,7 @@ export async function startPoseJob(
   });
 
   setJob({
-    phase: modelCached ? "processing" : "downloading",
+    phase: modelReady ? "processing" : "downloading",
     exerciseId: meta.exerciseId,
     mediaId: meta.id,
     downloadTotal: manifest.totalBytes,
@@ -135,7 +139,7 @@ export async function startPoseJob(
   });
 
   try {
-    if (!modelCached) {
+    if (!modelReady) {
       if (typeof navigator !== "undefined" && navigator.onLine === false) {
         setJob({ ...current!, phase: "offline", modelManifest: manifest });
         return;
@@ -169,9 +173,9 @@ export async function startPoseJob(
       modelManifest: manifest,
     });
 
-    if (modelCached || typeof navigator === "undefined" || navigator.onLine === false) {
+    if (modelReady || typeof navigator === "undefined" || navigator.onLine === false) {
       const offlineReady = await isPoseModelAvailableOffline(base);
-      if (!offlineReady && (modelCached || navigator.onLine === false)) {
+      if (!offlineReady && (modelReady || navigator.onLine === false)) {
         setJob({
           phase: "offline",
           exerciseId: meta.exerciseId,
@@ -280,8 +284,8 @@ export async function resumePoseJobMarker(): Promise<void> {
   }
 }
 
-export async function isModelOnDevice(): Promise<boolean> {
-  const st = await loadMediaSettings();
-  if (st.poseModelReady) return true;
-  return isPoseModelCached();
+export async function isModelOnDevice(config: PoseJobConfig): Promise<boolean> {
+  const manifest = await loadPoseModelManifest(config);
+  if (!manifest?.files.length) return false;
+  return isPoseModelCached(manifest, config.poseModelBaseUrl);
 }

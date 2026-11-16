@@ -81,6 +81,7 @@ export function revokeMediaPosterUrl(state: MediaFlowState): void {
 export async function hydrateMediaDraft(
   state: MediaFlowState,
   exerciseId: string,
+  poseModelBaseUrl = "/models",
 ): Promise<void> {
   const saved = await getExerciseMedia(exerciseId);
   state.draft = loadMediaDraft(exerciseId, saved);
@@ -89,7 +90,7 @@ export async function hydrateMediaDraft(
   state.formAnimView = "anim";
   const settings = await loadMediaSettings();
   state.unfinishedAnim = Boolean(settings.unfinishedAnim?.[exerciseId]);
-  state.modelOnDevice = await isModelOnDevice();
+  state.modelOnDevice = await isModelOnDevice({ poseModelBaseUrl });
   await refreshMediaPoster(state);
 }
 

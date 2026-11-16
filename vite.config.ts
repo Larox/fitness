@@ -33,7 +33,9 @@ export default defineConfig({
         navigateFallback: "index.html",
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.pathname.startsWith("/models/"),
+            urlPattern: ({ url }) =>
+              url.pathname.startsWith("/models/") &&
+              !url.pathname.endsWith("/manifest.json"),
             handler: "CacheFirst",
             options: {
               cacheName: "fitness-pose-v1",

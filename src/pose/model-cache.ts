@@ -1,10 +1,25 @@
+import type { PoseModelManifest } from "./model-manifest";
+
 export const POSE_CACHE_NAME = "fitness-pose-v1";
 
-export async function isPoseModelCached(): Promise<boolean> {
+export function poseModelFileUrl(baseUrl: string, filePath: string): string {
+  const path = filePath.replace(/^\//, "");
+  return `${baseUrl.replace(/\/$/, "")}/${path}`;
+}
+
+export async function isPoseModelCached(
+  manifest: PoseModelManifest,
+  baseUrl: string,
+): Promise<boolean> {
   if (typeof caches === "undefined") return false;
+  if (!manifest.files.length) return false;
   const cache = await caches.open(POSE_CACHE_NAME);
-  const keys = await cache.keys();
-  return keys.length > 0;
+  for (const file of manifest.files) {
+    const url = poseModelFileUrl(baseUrl, file.path);
+    const hit = await cache.match(url);
+    if (!hit) return false;
+  }
+  return true;
 }
 
 export async function clearPoseModelCache(): Promise<void> {
