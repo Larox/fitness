@@ -10,6 +10,7 @@ import { renderConfigError, mountSetupScreen } from "./setup/setup-screen";
 import { createLocalStorageAdapter } from "./setup/storage";
 import { purgeOrphanExerciseMedia } from "./media/service";
 import { resumePoseJobMarker } from "./pose/pose-job-service";
+import { mountTodayScreen } from "./today/today-screen";
 
 export async function bootApp(root: HTMLElement): Promise<void> {
   const loaded = await fetchAppConfig();
@@ -37,6 +38,11 @@ export async function bootApp(root: HTMLElement): Promise<void> {
   const storage = createLocalStorageAdapter();
   let setupMount: ReturnType<typeof mountSetupScreen> | null = null;
   let exerciseMount: ReturnType<typeof mountExerciseFlow> | null = null;
+  let todayMount: ReturnType<typeof mountTodayScreen> | null = null;
+
+  const routineSourceById = new Map(
+    library.routines.map((routine) => [routine.id, routine.source] as const),
+  );
 
   const persistedCounts = () => {
     const state = mergePersistedState(storage.load(), config);
@@ -46,7 +52,59 @@ export async function bootApp(root: HTMLElement): Promise<void> {
     };
   };
 
+  function getPlanContext(): PlanBuildContext {
+    const persisted = mergePersistedState(storage.load(), config);
+    const exercisesById = mergeExercisesById(
+      library.exercises,
+      persisted.userExercises ?? [],
+      config.conditions,
+    );
+    const excludedExerciseIds = new Set(
+      (persisted.hurtExclusions ?? []).map((row) => row.exerciseId),
+    );
+    const routineNotesById = new Map(
+      library.routines.map((routine) => [routine.id, routine.notes]),
+    );
+    const labels = createConditionLabelContext(config, persisted.conditionOverrides ?? {});
+    return {
+      conditions: config.conditions,
+      routines: library.routines,
+      exercisesById,
+      excludedExerciseIds,
+      routineNotesById,
+      conditionLabel: labels.conditionLabel,
+    };
+  }
+
+  function exercisesById() {
+    const persisted = mergePersistedState(storage.load(), config);
+    return mergeExercisesById(
+      library.exercises,
+      persisted.userExercises ?? [],
+      config.conditions,
+    );
+  }
+
+  function showToday(): void {
+    setupMount?.destroy();
+    setupMount = null;
+    exerciseMount?.destroy();
+    exerciseMount = null;
+    document.getElementById("setup-bar")?.remove();
+    document.getElementById("setup-layer")?.remove();
+    todayMount = mountTodayScreen({
+      config,
+      storage,
+      root,
+      exercisesById: exercisesById(),
+      routineSourceById,
+      onOpenSettings: () => showSetup(),
+    });
+  }
+
   function showSetup(): void {
+    todayMount?.destroy();
+    todayMount = null;
     exerciseMount?.destroy();
     exerciseMount = null;
     const counts = persistedCounts();
@@ -58,43 +116,23 @@ export async function bootApp(root: HTMLElement): Promise<void> {
       hurtExerciseCount: counts.hurt,
       onOpenMyExercises: () => showExercises("my"),
       onOpenHurtList: () => showExercises("hurt"),
-      getPlanContext: (): PlanBuildContext => {
-        const persisted = mergePersistedState(storage.load(), config);
-        const exercisesById = mergeExercisesById(
-          library.exercises,
-          persisted.userExercises ?? [],
-          config.conditions,
-        );
-        const excludedExerciseIds = new Set(
-          (persisted.hurtExclusions ?? []).map((row) => row.exerciseId),
-        );
-        const routineNotesById = new Map(
-          library.routines.map((routine) => [routine.id, routine.notes]),
-        );
-        const labels = createConditionLabelContext(
-          config,
-          persisted.conditionOverrides ?? {},
-        );
-        return {
-          conditions: config.conditions,
-          routines: library.routines,
-          exercisesById,
-          excludedExerciseIds,
-          routineNotesById,
-          conditionLabel: labels.conditionLabel,
-        };
+      onSaved: (state) => {
+        if (state.setupComplete && state.weekPlan) {
+          showToday();
+        }
       },
+      getPlanContext,
     });
   }
 
-  function showExercises(
-    view: "my" | "hurt",
-    editId?: string,
-  ): void {
+  function showExercises(view: "my" | "hurt", editId?: string): void {
     setupMount?.destroy();
     setupMount = null;
+    todayMount?.destroy();
+    todayMount = null;
     document.getElementById("setup-bar")?.remove();
     document.getElementById("setup-layer")?.remove();
+    document.getElementById("today-bar")?.remove();
     exerciseMount = mountExerciseFlow({
       config,
       storage,
@@ -103,9 +141,21 @@ export async function bootApp(root: HTMLElement): Promise<void> {
       libraryRoutines: library.routines,
       initialView: view,
       editId,
-      onBackToSettings: () => showSetup(),
+      onBackToSettings: () => {
+        const persisted = mergePersistedState(storage.load(), config);
+        if (persisted.setupComplete && persisted.weekPlan) {
+          showToday();
+        } else {
+          showSetup();
+        }
+      },
     });
   }
 
-  showSetup();
+  const initial = mergePersistedState(storage.load(), config);
+  if (initial.setupComplete && initial.weekPlan) {
+    showToday();
+  } else {
+    showSetup();
+  }
 }

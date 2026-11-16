@@ -228,17 +228,42 @@ export function buildWeeklyPlan(input: BuildWeekPlanInput): BuildWeekPlanResult 
 
   for (const cell of layout) {
     if (cell.slotKind === "rest") {
+      const sessionId = `rest-${cell.dayIndex}`;
       const minutes = restMobilityMinutes(rng);
+      const restRng = createSeededRng(`${seed}:rest:${cell.dayIndex}`);
+      const picked = pickRoutines(
+        input.routines,
+        "light_mobility",
+        minutes,
+        "home",
+        input.settings,
+        restRng,
+      );
+      const exerciseRows: NormalizedExercise[] = [];
+      for (const routine of picked) {
+        for (const exerciseId of routine.exerciseIds) {
+          const exercise = input.exercisesById.get(exerciseId);
+          if (exercise) {
+            exerciseRows.push(exercise);
+          }
+        }
+      }
+      const ordered = orderExercises(exerciseRows);
+      const candidateExerciseIds = ordered.map((row) => row.id);
+      const filtered = filterSession(candidateExerciseIds, context, input.exercisesById);
+      assertNoHighRiskScheduled(filtered.scheduled, input.exercisesById, active);
+      sessions[sessionId] = filtered;
+      const hasCaution = filtered.scheduled.some((row) => row.cautions.length > 0);
       rows.push({
         dayIndex: cell.dayIndex,
         dayLabel: cell.dayLabel,
         slotKind: "rest",
-        sessionId: `rest-${cell.dayIndex}`,
-        title: "Rest",
-        location: null,
+        sessionId,
+        title: "Rest day",
+        location: "home",
         minutes,
-        hasCaution: false,
-        candidateExerciseIds: [],
+        hasCaution,
+        candidateExerciseIds,
       });
       continue;
     }

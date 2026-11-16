@@ -290,7 +290,7 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
     }
 
     if (!isSetupMode && persisted.weekPlan) {
-      html += renderThisWeekList(persisted.weekPlan);
+      html += renderThisWeekList(persisted.weekPlan, persisted.completedSessions);
     }
 
     html += `<div class="sect"><h2>Schedule</h2></div><div class="group">

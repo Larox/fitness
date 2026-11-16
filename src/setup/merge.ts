@@ -148,5 +148,46 @@ export function mergePersistedState(
     deletedExerciseHistory: sanitizeDeletedHistory(stored.deletedExerciseHistory),
     weekSessionsRemaining: sanitizeWeekSessions(stored.weekSessionsRemaining),
     weekPlan: sanitizeWeekPlan(stored.weekPlan),
+    completedSessions: sanitizeCompletedSessions(stored.completedSessions),
+    exerciseBellKg: sanitizeExerciseBellMap(stored.exerciseBellKg),
   };
+}
+
+function sanitizeCompletedSessions(
+  raw: unknown,
+): PersistedAppState["completedSessions"] {
+  if (!isPlainObject(raw)) {
+    return undefined;
+  }
+  const out: NonNullable<PersistedAppState["completedSessions"]> = {};
+  for (const [sessionId, value] of Object.entries(raw)) {
+    if (!isPlainObject(value)) {
+      continue;
+    }
+    if (typeof value.completedAt !== "string") {
+      continue;
+    }
+    out[sessionId] = {
+      completedAt: value.completedAt,
+      partial: value.partial === true,
+    };
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function sanitizeExerciseBellMap(
+  raw: unknown,
+): PersistedAppState["exerciseBellKg"] {
+  if (!isPlainObject(raw)) {
+    return undefined;
+  }
+  const out: NonNullable<PersistedAppState["exerciseBellKg"]> = {};
+  for (const [exerciseId, value] of Object.entries(raw)) {
+    if (value === null) {
+      out[exerciseId] = null;
+    } else if (typeof value === "number" && Number.isFinite(value)) {
+      out[exerciseId] = value;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }
