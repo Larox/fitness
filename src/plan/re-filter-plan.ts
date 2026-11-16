@@ -14,6 +14,7 @@ export interface ReFilterPlanInput {
   exercisesById: ReadonlyMap<string, NormalizedExercise>;
   excludedExerciseIds?: ReadonlySet<string>;
   routineNotesById?: ReadonlyMap<string, string | undefined>;
+  conditionLabel?: (id: string) => string;
 }
 
 export function reFilterWeekPlan(input: ReFilterPlanInput): WeekPlan {
@@ -23,6 +24,7 @@ export function reFilterWeekPlan(input: ReFilterPlanInput): WeekPlan {
     excludedExerciseIds: input.excludedExerciseIds ?? new Set(),
     exercisesById: input.exercisesById,
     routineNotesById: input.routineNotesById,
+    conditionLabel: input.conditionLabel,
   };
 
   const sessions = { ...input.plan.sessions };

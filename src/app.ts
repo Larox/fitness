@@ -4,6 +4,7 @@ import { mountExerciseFlow } from "./exercises/exercise-screen";
 import { mergeExercisesById } from "./exercises/planning";
 import { fetchImportedLibrary } from "./library/fetch-library";
 import type { PlanBuildContext } from "./plan/apply-settings-save";
+import { createConditionLabelContext } from "./setup/condition-labels";
 import { mergePersistedState } from "./setup/merge";
 import { renderConfigError, mountSetupScreen } from "./setup/setup-screen";
 import { createLocalStorageAdapter } from "./setup/storage";
@@ -70,12 +71,17 @@ export async function bootApp(root: HTMLElement): Promise<void> {
         const routineNotesById = new Map(
           library.routines.map((routine) => [routine.id, routine.notes]),
         );
+        const labels = createConditionLabelContext(
+          config,
+          persisted.conditionOverrides ?? {},
+        );
         return {
           conditions: config.conditions,
           routines: library.routines,
           exercisesById,
           excludedExerciseIds,
           routineNotesById,
+          conditionLabel: labels.conditionLabel,
         };
       },
     });
