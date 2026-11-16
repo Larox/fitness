@@ -1,0 +1,72 @@
+[
+  {
+    "id": "fixture_safety",
+    "title": "Safety filter fixtures",
+    "notes": "Safer option: try the gentle march pattern instead.",
+    "exercises": [
+      {
+        "name": "Fixture high no swap",
+        "reps": "5",
+        "concern_a_risk": "high",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Fixture high swap ok",
+        "reps": "5",
+        "concern_a_risk": "high",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Fixture swap target",
+        "reps": "10",
+        "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Fixture high swap bad",
+        "reps": "5",
+        "concern_a_risk": "high",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Fixture bad swap target",
+        "reps": "5",
+        "concern_a_risk": "high",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Fixture moderate caution",
+        "reps": "8",
+        "caution": "Ease in slowly",
+        "concern_a_risk": "moderate",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Fixture cap reps",
+        "reps": "20",
+        "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Fixture cap hold",
+        "reps": "60 s hold",
+        "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Fixture excluded",
+        "reps": "5",
+        "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Fixture inactive blocks off",
+        "reps": "5",
+        "concern_a_risk": "high",
+        "concern_b_risk": "low"
+      }
+    ],
+    "concern_a_risk": "low",
+    "concern_b_risk": "low"
+  }
+]

@@ -24,7 +24,7 @@ describe("importLibrary", () => {
     expect(result.errors).toEqual([]);
     expect(result.skipped).toEqual([]);
     expect(result.routines.length).toBe(2);
-    expect(result.exercises.length).toBe(4);
+    expect(result.exercises.length).toBe(5);
 
     const march = result.exercises.find((e) => e.name === "Gentle march");
     expect(march).toBeDefined();
