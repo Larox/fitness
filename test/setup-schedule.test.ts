@@ -3,7 +3,9 @@ import {
   clampDaysPerWeek,
   DAYS_PER_WEEK_MAX,
   DAYS_PER_WEEK_MIN,
+  DEFAULT_DAYS_PER_WEEK,
   daysPerWeekHint,
+  normalizeDaysPerWeek,
 } from "../src/setup/schedule";
 
 describe("days per week bounds", () => {
@@ -25,5 +27,12 @@ describe("days per week bounds", () => {
   it("describes day 5 as a light mobility day", () => {
     expect(daysPerWeekHint(5)).toContain("mobility");
     expect(daysPerWeekHint(4)).not.toContain("mobility");
+  });
+});
+
+describe("normalizeDaysPerWeek", () => {
+  it("falls back to default when outside 2–5", () => {
+    expect(normalizeDaysPerWeek(6)).toBe(DEFAULT_DAYS_PER_WEEK);
+    expect(normalizeDaysPerWeek(1)).toBe(DEFAULT_DAYS_PER_WEEK);
   });
 });
