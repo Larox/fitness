@@ -62,6 +62,8 @@ export interface NormalizedExercise {
   equipment: string | null;
   cues: string[];
   caution?: string;
+  /** Per-condition moderate caution copy (user exercises); library uses caution. */
+  moderateCautionsByCondition?: Record<string, string>;
   conditionRisks: Record<string, RiskLevel>;
   overlay?: ExerciseOverlayEntry;
 }

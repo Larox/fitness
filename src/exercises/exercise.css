@@ -1,0 +1,283 @@
+@import "../tokens.css";
+
+html {
+  scroll-padding-bottom: 140px;
+}
+
+body.exercise-has-bar {
+  padding-bottom: 120px;
+}
+
+.exercise-shell {
+  padding: var(--space-2) var(--space-1) var(--space-4);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.exercise-shell .back {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--primary);
+  background: none;
+  border: 0;
+}
+
+.exercise-shell .title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.exercise-shell .sub {
+  color: var(--muted);
+  font-size: 15px;
+  margin: 8px 0 0;
+}
+
+.exercise-shell .sect h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 24px 0 12px;
+}
+
+.exercise-shell .group {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.exercise-shell .field {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.exercise-shell .field:first-child {
+  border-top: 0;
+}
+
+.exercise-shell .flabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+
+.exercise-shell .textin,
+.exercise-shell .areain {
+  width: 100%;
+  min-height: 48px;
+  font-size: 17px;
+  padding: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.exercise-shell .textin:focus,
+.exercise-shell .areain:focus {
+  border-color: var(--primary);
+  outline: 1px solid var(--primary);
+}
+
+.exercise-shell .textin[aria-invalid="true"],
+.exercise-shell .areain[aria-invalid="true"] {
+  border-color: var(--danger);
+  outline: 1px solid var(--danger);
+}
+
+.exercise-shell .err {
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 500;
+  margin: 8px 0 0;
+}
+
+.exercise-shell .errsum {
+  background: var(--danger-tint);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.exercise-shell .errsum a {
+  display: inline-block;
+  min-height: 44px;
+  line-height: 44px;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.exercise-shell .preview {
+  color: var(--primary);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.exercise-shell .tag {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+}
+
+.exercise-shell .tag-warn {
+  background: var(--danger-tint);
+  color: var(--danger);
+}
+
+.exercise-shell .tag-new {
+  background: var(--success-tint);
+  color: var(--success);
+}
+
+.exercise-shell .nrow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 72px;
+  padding: 12px 16px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  text-align: left;
+}
+
+.exercise-shell .nrow:first-child {
+  border-top: 0;
+}
+
+.exercise-shell .restore-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 72px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.exercise-shell .restore-row:first-child {
+  border-top: 0;
+}
+
+.exercise-shell .restore-pill {
+  min-height: 44px;
+  min-width: 88px;
+  padding: 0 16px;
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  color: var(--primary);
+  font-weight: 600;
+  background: #fff;
+}
+
+.exercise-shell .undo-row {
+  background: var(--success-tint);
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.exercise-shell .undo-row button {
+  min-height: 44px;
+  color: var(--primary);
+  font-weight: 600;
+  background: none;
+  border: 0;
+}
+
+.exercise-shell .status-toast {
+  background: var(--success-tint);
+  color: var(--success);
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.exercise-shell .delete {
+  min-height: 44px;
+  margin: 24px auto;
+  display: block;
+  color: var(--danger);
+  font-weight: 600;
+  background: none;
+  border: 0;
+}
+
+.exercise-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  z-index: 20;
+  transform: translateY(calc(-1 * var(--kb-offset, 0px)));
+}
+
+.exercise-bar.compact .help {
+  display: none;
+}
+
+.exercise-bar .help {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.exercise-bar .help.danger {
+  color: var(--danger);
+}
+
+.exercise-bar .primary {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 12px;
+  border: 0;
+  background: var(--primary);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.exercise-bar .primary:disabled {
+  opacity: 0.5;
+}
+
+.exercise-shell .risk-pill {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--danger-tint);
+  color: var(--danger);
+  margin-left: 8px;
+}
+
+.exercise-shell .caution-field {
+  background: var(--caution-tint);
+  border-left: 4px solid var(--caution-text);
+  padding: 12px;
+  margin-top: 12px;
+  border-radius: 8px;
+}
+
+.risk-seg button[data-level="low"][aria-checked="true"] {
+  color: var(--success);
+}
+.risk-seg button[data-level="moderate"][aria-checked="true"] {
+  color: var(--caution-text);
+}
+.risk-seg button[data-level="high"][aria-checked="true"] {
+  color: var(--danger);
+}

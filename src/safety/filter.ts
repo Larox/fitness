@@ -1,4 +1,5 @@
 import type { ConditionConfig } from "../config/types";
+import { resolveModerateCautionLines } from "../exercises/caution";
 import type { NormalizedExercise, RiskLevel } from "../library/types";
 import type {
   DroppedExercise,
@@ -119,8 +120,26 @@ function buildScheduled(
 ): ScheduledExercise {
   const cautions: string[] = [];
   const moderate = activeModerateConditions(scheduled, conditions, activeConditionIds);
-  if (moderate.length > 0 && scheduled.caution) {
-    cautions.push(scheduled.caution);
+  if (moderate.length > 0) {
+    if (scheduled.moderateCautionsByCondition) {
+      cautions.push(
+        ...resolveModerateCautionLines(
+          moderate,
+          scheduled.conditionRisks,
+          scheduled.moderateCautionsByCondition,
+        ),
+      );
+    } else if (scheduled.caution) {
+      cautions.push(scheduled.caution);
+    } else {
+      cautions.push(
+        ...resolveModerateCautionLines(
+          moderate,
+          scheduled.conditionRisks,
+          {},
+        ),
+      );
+    }
   }
 
   const dose = clampDose(scheduled);

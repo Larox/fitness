@@ -1,4 +1,10 @@
 import type { AppConfig } from "../config/types";
+import {
+  sanitizeDeletedHistory,
+  sanitizeHurtExclusions,
+  sanitizeUserExercises,
+  sanitizeWeekSessions,
+} from "../exercises/persisted";
 import type { PersistedAppState, TrainingSettings } from "./types";
 import { defaultTrainingSettings } from "./defaults";
 import {
@@ -113,6 +119,10 @@ export function mergePersistedState(
     return {
       setupComplete: false,
       settings: defaultTrainingSettings(config),
+      userExercises: [],
+      hurtExclusions: [],
+      deletedExerciseHistory: [],
+      weekSessionsRemaining: [],
       ...(stored && isPlainObject(stored) ? pickDisclaimerFields(stored) : {}),
     };
   }
@@ -121,5 +131,9 @@ export function mergePersistedState(
     ...pickDisclaimerFields(stored),
     setupComplete: stored.setupComplete === true,
     settings: sanitizeTrainingSettings(stored.settings, config),
+    userExercises: sanitizeUserExercises(stored.userExercises),
+    hurtExclusions: sanitizeHurtExclusions(stored.hurtExclusions),
+    deletedExerciseHistory: sanitizeDeletedHistory(stored.deletedExerciseHistory),
+    weekSessionsRemaining: sanitizeWeekSessions(stored.weekSessionsRemaining),
   };
 }

@@ -1,3 +1,5 @@
+import type { DeletedExerciseRecord, HurtExclusion, UserExercise } from "../exercises/types";
+
 /** User training preferences persisted on device. */
 export interface TrainingSettings {
   daysPerWeek: number;
@@ -17,6 +19,11 @@ export interface PersistedAppState {
   disclaimerAckAt?: string;
   /** Whether the user finished first-run setup. */
   setupComplete: boolean;
+  userExercises?: UserExercise[];
+  hurtExclusions?: HurtExclusion[];
+  deletedExerciseHistory?: DeletedExerciseRecord[];
+  /** Sessions still scheduled in the current plan week (for re-filter and restore semantics). */
+  weekSessionsRemaining?: WeekSessionCandidate[];
 }
 
 export interface SettingsChangeSummary {
