@@ -1,1 +1,17 @@
-{}
+{
+  "ex_77cff40e1dc6e7d8": {
+    "swap_to": "ex_f0c974f1622ac6cf"
+  },
+  "ex_cb443a8a597fbddf": {
+    "swap_to": "ex_3ea2a80181eb25ee"
+  },
+  "ex_88cb93feadd62381": {
+    "max_hold_s": 10
+  },
+  "ex_435280148572843f": {
+    "max_reps": 15
+  },
+  "ex_e70d4cba404471d4": {
+    "max_reps": 10
+  }
+}
