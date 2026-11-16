@@ -21,6 +21,8 @@ export interface EquipmentConfig {
 }
 
 export interface AppConfig {
+  /** Same-origin base URL for the on-device pose model (see config.example.json). */
+  poseModelBaseUrl?: string;
   /** Path to the exercise library JSON (relative to repo root or absolute). */
   libraryPath: string;
   /** Optional overlay keyed by exercise id. */

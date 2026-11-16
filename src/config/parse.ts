@@ -180,6 +180,14 @@ export function parseAppConfig(raw: unknown): { config?: AppConfig; errors: stri
     }
   }
 
+  if (obj.poseModelBaseUrl !== undefined) {
+    if (!isNonEmptyString(obj.poseModelBaseUrl)) {
+      errors.push("poseModelBaseUrl must be a non-empty string when set");
+    } else {
+      config.poseModelBaseUrl = obj.poseModelBaseUrl.trim();
+    }
+  }
+
   if (errors.length > 0) {
     return { errors };
   }

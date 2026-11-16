@@ -6,6 +6,7 @@ import { mergePersistedState } from "./setup/merge";
 import { renderConfigError, mountSetupScreen } from "./setup/setup-screen";
 import { createLocalStorageAdapter } from "./setup/storage";
 import { purgeOrphanExerciseMedia } from "./media/service";
+import { resumePoseJobMarker } from "./pose/pose-job-service";
 
 export async function bootApp(root: HTMLElement): Promise<void> {
   const loaded = await fetchAppConfig();
@@ -28,6 +29,7 @@ export async function bootApp(root: HTMLElement): Promise<void> {
     ),
   ]);
   void purgeOrphanExerciseMedia(validExerciseIds);
+  void resumePoseJobMarker();
 
   const storage = createLocalStorageAdapter();
   let setupMount: ReturnType<typeof mountSetupScreen> | null = null;

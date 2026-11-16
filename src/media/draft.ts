@@ -13,6 +13,8 @@ export interface MediaFormDraft {
   replaced: ExerciseMediaMeta | null;
   /** Last visible media removed in draft; used for Undo before Save. */
   removedSnapshot: ExerciseMediaMeta | null;
+  /** Snapshot had a pose animation (for removed copy). */
+  removedHadPose?: boolean;
   /** True when Remove cleared an unsaved import or replace. */
   removedWasUnsaved: boolean;
   removeDraft: boolean;
@@ -74,6 +76,7 @@ export function markMediaRemoved(draft: MediaFormDraft): MediaFormDraft {
     ...draft,
     removeDraft: true,
     removedSnapshot: snapshot,
+    removedHadPose: Boolean(snapshot?.pose),
     removedWasUnsaved,
     display: null,
     pending: null,

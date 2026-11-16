@@ -7,6 +7,16 @@ export type MediaImportError =
   | "unsupported-format"
   | "source-too-large";
 
+export interface PoseMeta {
+  key: string;
+  bytes: number;
+  frames: number;
+  fps: number;
+  keyFrame: number;
+  createdAt: string;
+  modelVersion: string;
+}
+
 export interface ExerciseMediaMeta {
   id: string;
   exerciseId: string;
@@ -22,6 +32,7 @@ export interface ExerciseMediaMeta {
   fileKey: string;
   createdAt: string;
   altText?: string;
+  pose?: PoseMeta;
 }
 
 export interface MediaImportProgress {
@@ -29,9 +40,20 @@ export interface MediaImportProgress {
   total: number;
 }
 
+export interface PoseJobMarker {
+  exerciseId: string;
+  mediaId: string;
+  startedAt: string;
+}
+
 export interface MediaStorageSettings {
   persistGranted?: boolean;
   persistRequested?: boolean;
+  poseModelReady?: boolean;
+  poseJob?: PoseJobMarker | null;
+  /** Per exercise, whether Today shows animation or clip first. */
+  todayMediaView?: Record<string, "anim" | "clip">;
+  unfinishedAnim?: Record<string, boolean>;
 }
 
 export interface MediaUsageSummary {

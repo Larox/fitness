@@ -1,4 +1,13 @@
 import { renderMediaAttachSection } from "../media/attach-html";
+import type { AnimAttachOptions } from "../pose/attach-anim-html";
+import {
+  getPoseJob,
+  isModelOnDevice,
+  type PoseJobState,
+} from "../pose/pose-job-service";
+import { loadMediaSettings } from "../media/meta-store";
+import { clearPoseFromMeta } from "../pose/pose-persist";
+import { cancelPoseJob } from "../pose/pose-job-service";
 import {
   emptyMediaDraft,
   isMediaDraftDirty,
@@ -30,6 +39,13 @@ export interface MediaFlowState {
   thumbByExerciseId: Map<string, string>;
   mediaUsageText: string;
   pendingListRemove: ExerciseMediaMeta | null;
+  poseJob: PoseJobState | null;
+  formAnimView: "anim" | "clip";
+  poseRemoveDraft: boolean;
+  modelOnDevice: boolean;
+  unfinishedAnim: boolean;
+  exerciseName: string;
+  manifestLabel?: string;
 }
 
 export function createMediaFlowState(exerciseId: string): MediaFlowState {
@@ -40,6 +56,12 @@ export function createMediaFlowState(exerciseId: string): MediaFlowState {
     thumbByExerciseId: new Map(),
     mediaUsageText: "",
     pendingListRemove: null,
+    poseJob: getPoseJob(),
+    formAnimView: "anim",
+    poseRemoveDraft: false,
+    modelOnDevice: false,
+    unfinishedAnim: false,
+    exerciseName: "this exercise",
   };
 }
 
@@ -56,6 +78,11 @@ export async function hydrateMediaDraft(
 ): Promise<void> {
   const saved = await getExerciseMedia(exerciseId);
   state.draft = loadMediaDraft(exerciseId, saved);
+  state.poseRemoveDraft = false;
+  state.formAnimView = "anim";
+  const settings = await loadMediaSettings();
+  state.unfinishedAnim = Boolean(settings.unfinishedAnim?.[exerciseId]);
+  state.modelOnDevice = await isModelOnDevice();
   await refreshMediaPoster(state);
 }
 
@@ -78,10 +105,29 @@ export function mediaAttachHtml(
   if (state.draft.exerciseId !== exerciseId) {
     state.draft.exerciseId = exerciseId;
   }
+  const display = state.draft.display;
+  let anim: AnimAttachOptions | undefined;
+  if (display?.kind === "clip") {
+    anim = {
+      meta: display,
+      posterUrl: state.posterUrl ?? undefined,
+      exerciseName: state.exerciseName,
+      job: state.poseJob,
+      modelCached: state.modelOnDevice,
+      modelOnDevice: state.modelOnDevice,
+      unfinished: state.unfinishedAnim,
+      view: state.formAnimView,
+      poseRemovedDraft: state.poseRemoveDraft,
+      manifestTotal: state.manifestLabel,
+      showToggle: Boolean(display.pose) && !state.poseRemoveDraft,
+    };
+  }
   return renderMediaAttachSection(state.draft, {
-    changedDot: isMediaDraftDirty(state.draft),
+    changedDot: isMediaDraftDirty(state.draft) || state.poseRemoveDraft,
     posterUrl: state.posterUrl ?? undefined,
     removedStatus: state.draft.removeDraft && !state.draft.display,
+    removedHasAnimation: state.draft.removedHadPose,
+    anim,
   });
 }
 
@@ -108,6 +154,7 @@ export async function startMediaImport(
   file: File,
   onChange: () => void,
 ): Promise<void> {
+  void cancelPoseJob();
   state.abort?.abort();
   const controller = new AbortController();
   state.abort = controller;
@@ -167,10 +214,28 @@ export function cancelMediaImport(state: MediaFlowState, onChange: () => void): 
   onChange();
 }
 
+export async function commitPoseRemoveForSave(
+  state: MediaFlowState,
+  exerciseId: string,
+): Promise<void> {
+  if (!state.poseRemoveDraft) return;
+  const mediaId = state.draft.display?.id ?? state.draft.saved?.id;
+  if (mediaId) {
+    await clearPoseFromMeta(exerciseId, mediaId);
+    const saved = await getExerciseMedia(exerciseId);
+    if (saved) {
+      state.draft.display = saved;
+      state.draft.saved = saved;
+    }
+  }
+  state.poseRemoveDraft = false;
+}
+
 export async function commitMediaForSave(
   state: MediaFlowState,
   exerciseId: string,
 ): Promise<void> {
+  await commitPoseRemoveForSave(state, exerciseId);
   if (state.draft.removeDraft) {
     const saved = state.draft.saved;
     const snap = state.draft.removedSnapshot;
@@ -220,6 +285,7 @@ export async function onExerciseDeleted(exerciseId: string): Promise<void> {
 }
 
 export function markRemove(state: MediaFormDraft): MediaFormDraft {
+  void cancelPoseJob();
   return markMediaRemoved(state);
 }
 
