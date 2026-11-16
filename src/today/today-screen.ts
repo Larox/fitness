@@ -19,7 +19,13 @@ import { formatScheduledDose } from "./dose-label";
 import { exerciseUsesKettlebell } from "./kettlebell";
 import { moderateCautionBanner } from "./moderate-caution";
 import { rowForDay } from "./resolve-session";
-import { defaultSetLogsForScheduled } from "./set-logs";
+import {
+  applySetMetric,
+  clampSetMetric,
+  renderSetLogsEditor,
+  toggleSetSkipped,
+} from "./set-editor";
+import { defaultSetLogsForScheduled, scheduledUsesHold } from "./set-logs";
 import { deleteSessionLog, saveSessionLog } from "./session-log-store";
 import type { ExerciseSessionLog, SessionLogRecord } from "./types";
 import { formatTodayOverline, weekPlanDayIndex } from "./weekday";
@@ -29,6 +35,7 @@ interface CardState {
   done: boolean;
   hurt: boolean;
   bellKg: number | null | undefined;
+  setLogs: ExerciseSessionLog["sets"];
 }
 
 export interface MountTodayScreenOptions {
@@ -93,6 +100,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
           done: false,
           hurt: false,
           bellKg: remembered,
+          setLogs: defaultSetLogsForScheduled(row),
         };
       }
     }
@@ -165,9 +173,20 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
           })()
         : "";
 
+    const setEditor =
+      state.expanded && exercise
+        ? renderSetLogsEditor(
+            sched.exerciseId,
+            exercise.name,
+            sched,
+            state.setLogs,
+            sessionSaved,
+          )
+        : "";
+
     const body =
       state.expanded && exercise
-        ? `<div class="tbody" id="today-body-${sched.exerciseId}">${cues}${bellHtml}<div class="tfoot"><span class="source-slot">${renderRoutineSourceLink(routineSourceById.get(exercise.routineId))}</span>
+        ? `<div class="tbody" id="today-body-${sched.exerciseId}"><div class="today-media-slot" id="today-media-${sched.exerciseId}"></div>${setEditor}${cues}${bellHtml}<div class="tfoot"><span class="source-slot">${renderRoutineSourceLink(routineSourceById.get(exercise.routineId))}</span>
           <button type="button" class="thurt" aria-pressed="${state.hurt ? "true" : "false"}" data-act="today-hurt" data-id="${sched.exerciseId}">This hurt</button></div></div>`
         : "";
 
@@ -187,7 +206,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
   async function mountExpandedMedia(exerciseId: string): Promise<void> {
     mediaPreview?.destroy();
     mediaPreview = null;
-    const host = root.querySelector<HTMLElement>(`#today-body-${exerciseId}`);
+    const host = root.querySelector<HTMLElement>(`#today-media-${exerciseId}`);
     const exercise = exercisesById.get(exerciseId);
     if (!host || !exercise) {
       return;
@@ -335,6 +354,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
         done: false,
         hurt: false,
         bellKg: persisted.exerciseBellKg?.[row.exerciseId],
+        setLogs: defaultSetLogsForScheduled(row),
       };
       cards[row.exerciseId]!.expanded = false;
     }
@@ -371,7 +391,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
         done: state.done,
         hurt: state.hurt,
         bellKg: state.bellKg ?? null,
-        sets: state.done ? defaultSetLogsForScheduled(sched) : [],
+        sets: state.done ? state.setLogs.map((row) => ({ ...row })) : [],
       });
     }
     return {
@@ -464,6 +484,43 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
           render();
         }
         break;
+      case "today-set-inc":
+      case "today-set-dec": {
+        if (!exerciseId || sessionSaved) {
+          break;
+        }
+        const schedRow = session.scheduled.find((row) => row.exerciseId === exerciseId);
+        const setIndex = Number(target.dataset.idx);
+        const card = cards[exerciseId];
+        if (!schedRow || !card || !Number.isFinite(setIndex)) {
+          break;
+        }
+        const hold = scheduledUsesHold(schedRow);
+        const current = card.setLogs[setIndex];
+        if (!current || current.status === "skipped") {
+          break;
+        }
+        const metric = hold
+          ? (current.holdS ?? schedRow.hold_s ?? 30)
+          : (current.reps ?? 10);
+        const delta = act === "today-set-inc" ? 1 : -1;
+        card.setLogs = applySetMetric(card.setLogs, setIndex, schedRow, metric + delta);
+        render();
+        break;
+      }
+      case "today-set-skip": {
+        if (!exerciseId || sessionSaved) {
+          break;
+        }
+        const setIndex = Number(target.dataset.idx);
+        const card = cards[exerciseId];
+        if (!card || !Number.isFinite(setIndex)) {
+          break;
+        }
+        card.setLogs = toggleSetSkipped(card.setLogs, setIndex);
+        render();
+        break;
+      }
       case "today-save": {
         const progress = countProgress(session);
         if (progress.done === 0) {
@@ -499,12 +556,47 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
     }
   }
 
+  function handleInput(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || !target.classList.contains("tset-in")) {
+      return;
+    }
+    if (sessionSaved) {
+      return;
+    }
+    const session = todaySession();
+    if (!session) {
+      return;
+    }
+    const exerciseId = target.dataset.id;
+    const setIndex = Number(target.dataset.idx);
+    const card = exerciseId ? cards[exerciseId] : undefined;
+    const schedRow = exerciseId
+      ? session.scheduled.find((row) => row.exerciseId === exerciseId)
+      : undefined;
+    if (!exerciseId || !card || !schedRow || !Number.isFinite(setIndex)) {
+      return;
+    }
+    const current = card.setLogs[setIndex];
+    if (!current || current.status === "skipped") {
+      return;
+    }
+    card.setLogs = applySetMetric(
+      card.setLogs,
+      setIndex,
+      schedRow,
+      clampSetMetric(Number(target.value), scheduledUsesHold(schedRow)),
+    );
+  }
+
   document.addEventListener("click", handleClick);
+  document.addEventListener("input", handleInput);
   render();
 
   return {
     destroy: () => {
       document.removeEventListener("click", handleClick);
+      document.removeEventListener("input", handleInput);
       mediaPreview?.destroy();
       bar.remove();
       root.innerHTML = "";
