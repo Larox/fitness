@@ -1,3 +1,8 @@
+import { fetchLibraryVideoBlob } from "../library/library-video-fetch";
+import {
+  routineLibraryMediaId,
+  saveRoutineLibraryPose,
+} from "../library/routine-pose";
 import { readMediaFileBlob } from "../media/service";
 import type { ExerciseMediaMeta } from "../media/types";
 import { loadMediaSettings, saveMediaSettings } from "../media/meta-store";
@@ -249,6 +254,153 @@ export async function startPoseJob(
       return;
     }
     setJob({ phase: "failed", exerciseId: meta.exerciseId, mediaId: meta.id, modelManifest: manifest });
+  } finally {
+    const st = await loadMediaSettings();
+    await saveMediaSettings({ ...st, poseJob: null });
+  }
+}
+
+export async function startRoutineLibraryPoseJob(
+  config: PoseJobConfig,
+  routineId: string,
+  videoRelativePath: string,
+  durationS: number,
+  modelCached: boolean,
+): Promise<void> {
+  abort?.abort();
+  abort = new AbortController();
+  const signal = abort.signal;
+  const base = config.poseModelBaseUrl.replace(/\/$/, "");
+  const mediaId = routineLibraryMediaId(routineId);
+  let manifest = await loadPoseModelManifest(config);
+  if (!manifest && modelCached) {
+    const bytes = await poseModelCachedBytes();
+    manifest = {
+      version: "pose_landmarker_lite",
+      totalBytes: bytes,
+      files: [],
+    };
+  }
+  if (!manifest) {
+    setJob({ phase: "offline", exerciseId: routineId, mediaId });
+    return;
+  }
+  const modelReady =
+    modelCached && manifest.files.length > 0
+      ? await isPoseModelCached(manifest, base)
+      : false;
+  const settings = await loadMediaSettings();
+  await saveMediaSettings({
+    ...settings,
+    poseJob: { exerciseId: routineId, mediaId, startedAt: new Date().toISOString() },
+  });
+
+  setJob({
+    phase: modelReady ? "processing" : "downloading",
+    exerciseId: routineId,
+    mediaId,
+    downloadTotal: manifest.totalBytes,
+    downloadLoaded: 0,
+    modelManifest: manifest,
+  });
+
+  try {
+    if (!modelReady) {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        setJob({ ...current!, phase: "offline", modelManifest: manifest });
+        return;
+      }
+      const { usage, quota } = await estimateDeviceStorage();
+      if (!hasStorageForNewFile(usage, quota, manifest.totalBytes * 1.1)) {
+        setJob({ ...current!, phase: "offline", modelManifest: manifest });
+        return;
+      }
+      await downloadPoseModelFiles(
+        base,
+        manifest,
+        (loaded, total) => {
+          if (current) {
+            setJob({ ...current, downloadLoaded: loaded, downloadTotal: total });
+          }
+        },
+        signal,
+      );
+      const st = await loadMediaSettings();
+      await saveMediaSettings({ ...st, poseModelReady: true, poseJob: st.poseJob ?? null });
+    }
+
+    if (signal.aborted) return;
+    setJob({
+      phase: "processing",
+      exerciseId: routineId,
+      mediaId,
+      processFrame: 0,
+      processTotal: Math.round(durationS * 15),
+      modelManifest: manifest,
+    });
+
+    const clipBlob = await fetchLibraryVideoBlob(videoRelativePath);
+    if (!clipBlob) {
+      setJob({ phase: "failed", exerciseId: routineId, mediaId, modelManifest: manifest });
+      return;
+    }
+    const resolved = await resolvePoseModelUrls(base);
+    const detector = await createMediapipePoseDetector({
+      wasmBaseUrl: resolved.wasmBaseUrl,
+      modelUrl: resolved.modelUrl,
+      revoke: resolved.revoke,
+    });
+    try {
+      const landmarks = await sampleClipLandmarks(
+        clipBlob,
+        durationS,
+        detector,
+        (frame, total) => {
+          if (current?.phase === "processing") {
+            setJob({ ...current, processFrame: frame, processTotal: total });
+          }
+        },
+        signal,
+      );
+      if (signal.aborted) return;
+      const result = processLandmarkFrames(landmarks, durationS, manifest.version);
+      if (!result.ok) {
+        setJob({
+          phase: result.reason === "no-person" ? "failed-noperson" : "failed",
+          exerciseId: routineId,
+          mediaId,
+          modelManifest: manifest,
+        });
+        return;
+      }
+      const poseFields = {
+        frames: result.frames,
+        fps: 15,
+        keyFrame: result.keyFrame,
+        createdAt: new Date().toISOString(),
+        modelVersion: manifest.version,
+      };
+      const pose = await saveRoutineLibraryPose(routineId, result.blob, poseFields, durationS);
+      setJob({
+        phase: "ready",
+        exerciseId: routineId,
+        mediaId,
+        modelManifest: manifest,
+        pendingPose: pose,
+      });
+    } finally {
+      detector.close();
+    }
+  } catch (err) {
+    if (signal.aborted) {
+      setJob({ phase: "offer", exerciseId: routineId, mediaId, modelManifest: manifest });
+      return;
+    }
+    if (err instanceof Error && err.message === "pose-model-offline") {
+      setJob({ phase: "offline", exerciseId: routineId, mediaId, modelManifest: manifest });
+      return;
+    }
+    setJob({ phase: "failed", exerciseId: routineId, mediaId, modelManifest: manifest });
   } finally {
     const st = await loadMediaSettings();
     await saveMediaSettings({ ...st, poseJob: null });

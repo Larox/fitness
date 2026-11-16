@@ -1,0 +1,32 @@
+[
+  {
+    "id": "fixture_video_ok",
+    "title": "Fixture: valid video path",
+    "video": "media/reels/fixture_one.mp4",
+    "exercises": [
+      {
+        "name": "Sample move",
+        "reps": "10",
+        "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      }
+    ],
+    "concern_a_risk": "low",
+    "concern_b_risk": "low"
+  },
+  {
+    "id": "fixture_video_bad",
+    "title": "Fixture: bad video path",
+    "video": "https://example.com/evil.mp4",
+    "exercises": [
+      {
+        "name": "Other move",
+        "reps": "8",
+        "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      }
+    ],
+    "concern_a_risk": "low",
+    "concern_b_risk": "low"
+  }
+]

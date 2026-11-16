@@ -208,7 +208,19 @@ describe("media meta replace save", () => {
       storage,
       root,
       libraryExercises: [],
-      libraryRoutines: [{ categories: ["mobility"] }],
+      libraryRoutines: [
+        {
+          id: "r1",
+          title: "Routine",
+          categories: ["mobility"],
+          equipment: [],
+          frequency: null,
+          durationMin: null,
+          difficulty: null,
+          conditionRisks: { concern_a: "low", concern_b: "low" },
+          exerciseIds: [],
+        },
+      ],
       initialView: "form",
       onBackToSettings: () => {},
     });
@@ -307,7 +319,19 @@ describe("media meta replace save", () => {
       storage,
       root: root2,
       libraryExercises,
-      libraryRoutines: [{ categories: ["mobility"] }],
+      libraryRoutines: [
+        {
+          id: "r1",
+          title: "Routine",
+          categories: ["mobility"],
+          equipment: [],
+          frequency: null,
+          durationMin: null,
+          difficulty: null,
+          conditionRisks: { concern_a: "low", concern_b: "low" },
+          exerciseIds: [],
+        },
+      ],
       initialView: "my",
       onBackToSettings: () => {},
     });
