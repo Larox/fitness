@@ -5,6 +5,7 @@ import { fetchImportedLibrary } from "./library/fetch-library";
 import { mergePersistedState } from "./setup/merge";
 import { renderConfigError, mountSetupScreen } from "./setup/setup-screen";
 import { createLocalStorageAdapter } from "./setup/storage";
+import { purgeOrphanExerciseMedia } from "./media/service";
 
 export async function bootApp(root: HTMLElement): Promise<void> {
   const loaded = await fetchAppConfig();
@@ -19,6 +20,14 @@ export async function bootApp(root: HTMLElement): Promise<void> {
     return;
   }
   const library = libraryResult.result;
+
+  const validExerciseIds = new Set<string>([
+    ...library.exercises.map((exercise) => exercise.id),
+    ...(mergePersistedState(createLocalStorageAdapter().load(), config).userExercises ?? []).map(
+      (row) => row.id,
+    ),
+  ]);
+  void purgeOrphanExerciseMedia(validExerciseIds);
 
   const storage = createLocalStorageAdapter();
   let setupMount: ReturnType<typeof mountSetupScreen> | null = null;
