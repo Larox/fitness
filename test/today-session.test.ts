@@ -28,6 +28,7 @@ import { deleteSessionLog, getSessionLog, saveSessionLog } from "../src/today/se
 import { defaultSetLogsForScheduled, normalizeExerciseSetLogs, scheduledUsesHold } from "../src/today/set-logs";
 import { assertTodaySessionSafe } from "../src/today/today-safety";
 import type { SessionLogRecord } from "../src/today/types";
+import { weekStartKey } from "../src/today/weekday";
 
 const root = resolve(import.meta.dirname, "..");
 const config = loadAppConfig(resolve(root, "config.example.json"));
@@ -153,19 +154,20 @@ describe("Today logging and week completion", () => {
       setupComplete: true,
       weekPlan: plan,
     };
-    const before = renderThisWeekList(plan, state.completedSessions);
+    const week = weekStartKey(new Date("2026-11-16T08:00:00.000Z"));
+    const before = renderThisWeekList(plan, state.completedSessions, week);
     expect(before).not.toContain("Done");
 
-    state = markSessionCompleted(state, row!.sessionId, {
+    state = markSessionCompleted(state, row!.sessionId, week, {
       completedAt: "2026-11-16T08:00:00.000Z",
       partial: false,
     });
-    const after = renderThisWeekList(plan, state.completedSessions);
+    const after = renderThisWeekList(plan, state.completedSessions, week);
     expect(after).toContain("Done");
     expect(after).toContain("prow-done");
 
-    state = unmarkSessionCompleted(state, row!.sessionId);
-    expect(renderThisWeekList(plan, state.completedSessions)).not.toContain("prow-done");
+    state = unmarkSessionCompleted(state, row!.sessionId, week);
+    expect(renderThisWeekList(plan, state.completedSessions, week)).not.toContain("prow-done");
   });
 
   it("builds a deterministic weekly plan seed for fixtures", () => {

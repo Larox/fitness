@@ -31,6 +31,7 @@ import {
   SESSION_LENGTH_OPTIONS,
 } from "./schedule";
 import type { PersistedAppState, TrainingSettings } from "./types";
+import { weekStartKey } from "../today/weekday";
 
 type SheetMode = "blocking" | "readonly" | null;
 
@@ -53,6 +54,7 @@ export interface MountSetupScreenOptions {
   hurtExerciseCount?: number;
   onOpenMyExercises?: () => void;
   onOpenHurtList?: () => void;
+  onBackToToday?: () => void;
   getPlanContext?: () => PlanBuildContext;
 }
 
@@ -120,6 +122,7 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
     hurtExerciseCount = 0,
     onOpenMyExercises,
     onOpenHurtList,
+    onBackToToday,
     getPlanContext,
   } = options;
 
@@ -281,7 +284,13 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
       persisted.conditionOverrides ?? {},
     );
 
-    let html = `<header class="hdr"><p class="overline">${isSetupMode ? "Setup" : "Settings"}</p>
+    const todayLink =
+      !isSetupMode && onBackToToday
+        ? `<button type="button" class="setup-today-link" data-act="back-today">Today</button>`
+        : "";
+    let html = `<header class="hdr">${
+      todayLink ? `<div class="hdr-top"><p class="overline">Settings</p>${todayLink}</div>` : `<p class="overline">${isSetupMode ? "Setup" : "Settings"}</p>`
+    }
       <h1 class="title">${isSetupMode ? "Plan your training" : "Training settings"}</h1>
       <p class="sub">${isSetupMode ? "Pick what fits. You can change any of this later in Settings." : "Changes apply from your next plan."}</p></header>`;
 
@@ -290,7 +299,11 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
     }
 
     if (!isSetupMode && persisted.weekPlan) {
-      html += renderThisWeekList(persisted.weekPlan, persisted.completedSessions);
+      html += renderThisWeekList(
+        persisted.weekPlan,
+        persisted.completedSessions,
+        weekStartKey(new Date()),
+      );
     }
 
     html += `<div class="sect"><h2>Schedule</h2></div><div class="group">
@@ -519,6 +532,9 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
         screen.sheet = null;
         refocusDisclaimerRow = true;
         break;
+      case "back-today":
+        onBackToToday?.();
+        return;
       case "open-my-exercises":
         onOpenMyExercises?.();
         return;
@@ -545,7 +561,7 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
         screen.conditionSavedBanner = null;
         screen.mode = "settings";
         onSaved?.(next, summary);
-        break;
+        return;
       }
       default:
         break;

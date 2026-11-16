@@ -1,6 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
+import "fake-indexeddb/auto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -48,7 +49,7 @@ describe("This week list after setup save", () => {
     });
   });
 
-  it("shows week rows with home or gym tag and caution marker when present", async () => {
+  it("opens Today after start training", async () => {
     const configJson = fixture("public/config.example.json");
     const libraryJson = fixture("public/data/sample-library.json");
     const overlayJson = fixture("public/data/overlay.json");
@@ -74,8 +75,13 @@ describe("This week list after setup save", () => {
     const save = document.querySelector<HTMLButtonElement>('[data-act="save"]');
     expect(save).toBeTruthy();
     save!.click();
-    expect(root.textContent).toContain("This week");
-    expect(root.textContent).toMatch(/Home|Gym/);
+    await vi.waitFor(
+      () => {
+        expect(root.className).toBe("today-shell");
+      },
+      { timeout: 2000 },
+    );
+    expect(root.textContent).toMatch(/TODAY|No plan yet|Rest is part|Tick off/);
     vi.unstubAllGlobals();
   });
 });

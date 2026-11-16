@@ -1,14 +1,16 @@
 import { escapeHtml, ICONS } from "../setup/icons";
 import type { PersistedAppState } from "../setup/types";
+import { isSessionCompleted } from "../today/completion";
 import type { WeekPlan } from "./types";
 
 export function renderThisWeekList(
   plan: WeekPlan,
-  completedSessions?: PersistedAppState["completedSessions"],
+  completedSessions: PersistedAppState["completedSessions"],
+  weekStart: string,
 ): string {
   const rows = plan.rows
     .map((row) => {
-      const done = Boolean(completedSessions?.[row.sessionId]);
+      const done = isSessionCompleted(completedSessions, row.sessionId, weekStart);
       const caution =
         !done && row.hasCaution
           ? `<span class="pcaution" aria-label="Caution before session">${ICONS.warn}</span>`
