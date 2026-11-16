@@ -19,17 +19,17 @@ describe("normalizeRisk", () => {
 
 describe("normalizeCategories", () => {
   it("splits slash- and comma-separated strings", () => {
-    expect(normalizeCategories("feet / ankles, mobility")).toEqual([
-      "feet",
-      "ankles",
-      "mobility",
+    expect(normalizeCategories("category_a / category_b, category_c")).toEqual([
+      "category_a",
+      "category_b",
+      "category_c",
     ]);
   });
 
   it("trims array entries", () => {
-    expect(normalizeCategories(["feet", " mobility/rehab "])).toEqual([
-      "feet",
-      "mobility/rehab",
+    expect(normalizeCategories(["category_a", " category_b/category_c "])).toEqual([
+      "category_a",
+      "category_b/category_c",
     ]);
   });
 });

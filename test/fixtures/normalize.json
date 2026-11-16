@@ -2,7 +2,7 @@
   {
     "id": "fixture_norm",
     "title": "Fixture: normalization",
-    "category": "feet / ankles, mobility",
+    "category": "category_a / category_b, category_c",
     "duration_min": "10-15",
     "exercises": [
       {
