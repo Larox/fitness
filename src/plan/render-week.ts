@@ -1,11 +1,20 @@
 import { escapeHtml, ICONS } from "../setup/icons";
+import type { PersistedAppState } from "../setup/types";
 import type { WeekPlan } from "./types";
 
-export function renderThisWeekList(plan: WeekPlan): string {
+export function renderThisWeekList(
+  plan: WeekPlan,
+  completedSessions?: PersistedAppState["completedSessions"],
+): string {
   const rows = plan.rows
     .map((row) => {
-      const caution = row.hasCaution
-        ? `<span class="pcaution" aria-label="Caution before session">${ICONS.warn}</span>`
+      const done = Boolean(completedSessions?.[row.sessionId]);
+      const caution =
+        !done && row.hasCaution
+          ? `<span class="pcaution" aria-label="Caution before session">${ICONS.warn}</span>`
+          : "";
+      const doneBadge = done
+        ? `<span class="pdone" aria-label="Session done">${ICONS.ck}</span>`
         : "";
       const locationTag =
         row.location === null
@@ -13,15 +22,16 @@ export function renderThisWeekList(plan: WeekPlan): string {
           : `<span class="ptag">${row.location === "home" ? "Home" : "Gym"}</span>`;
       const subtitle =
         row.slotKind === "rest"
-          ? `Optional mobility · ${row.minutes} min`
-          : `${row.minutes} min`;
-      return `<button type="button" class="prow" disabled aria-disabled="true">
+          ? `Optional mobility · ${row.minutes} min${done ? " · Done" : ""}`
+          : `${row.minutes} min${done ? " · Done" : ""}`;
+      return `<button type="button" class="prow${done ? " prow-done" : ""}" disabled aria-disabled="true">
         <span class="pday">${escapeHtml(row.dayLabel)}</span>
         <span class="ptxt">
           <span class="ptitle">${escapeHtml(row.title)}</span>
           <span class="pmeta">${escapeHtml(subtitle)}${locationTag ? ` · ${locationTag}` : ""}</span>
         </span>
         ${caution}
+        ${doneBadge}
       </button>`;
     })
     .join("");

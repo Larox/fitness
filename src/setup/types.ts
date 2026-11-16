@@ -14,6 +14,11 @@ export interface TrainingSettings {
   conditionsEnabled: Record<string, boolean>;
 }
 
+export interface SessionCompletionSummary {
+  completedAt: string;
+  partial: boolean;
+}
+
 export interface PersistedAppState {
   settings: TrainingSettings;
   /** Disclaimer version the user acknowledged, if any. */
@@ -33,6 +38,10 @@ export interface PersistedAppState {
   weekSessionsRemaining?: WeekSessionCandidate[];
   /** Current week plan (built after setup save). */
   weekPlan?: WeekPlan;
+  /** Session ids marked done this week (This week list). */
+  completedSessions?: Record<string, SessionCompletionSummary>;
+  /** Last kettlebell choice per exercise id (device). */
+  exerciseBellKg?: Record<string, number | null>;
 }
 
 export interface SettingsChangeSummary {
