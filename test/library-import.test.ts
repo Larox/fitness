@@ -82,7 +82,7 @@ describe("importLibrary", () => {
     expect(result.routines).toHaveLength(1);
 
     const routine = result.routines[0]!;
-    expect(routine.categories).toEqual(["feet", "ankles", "mobility"]);
+    expect(routine.categories).toEqual(["category_a", "category_b", "category_c"]);
     expect(routine.durationMin).toEqual({
       display: "10-15",
       min: 10,

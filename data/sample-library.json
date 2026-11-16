@@ -9,14 +9,14 @@
       {
         "name": "Gentle march",
         "reps": "20",
-        "cues": "Stand tall, soft steps, arms relaxed",
+        "cues": "Stand tall, soft steps, stay relaxed",
         "concern_a_risk": "low",
         "concern_b_risk": "low"
       },
       {
         "name": "Wall lean stretch",
         "reps": "30 s each side",
-        "cues": "Heel down, lean toward the wall",
+        "cues": "Keep a steady tempo",
         "concern_a_risk": "low",
         "concern_b_risk": "moderate"
       }
@@ -27,7 +27,7 @@
   {
     "id": "sample_routine_two",
     "source": "sample",
-    "title": "Core stability intro",
+    "title": "Stability intro block",
     "category": ["stability", "intro"],
     "duration_min": 5,
     "notes": "If bounce is too much, use Swap target stretch instead.",
