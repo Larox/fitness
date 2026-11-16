@@ -1,0 +1,1246 @@
+[
+ {
+  "id": "DfYY2U0hd1I",
+  "source": "https://www.instagram.com/reel/DfYY2U0hd1I/",
+  "video": "/workspace/reels/DfYY2U0hd1I.mp4",
+  "added": "2026-11-12",
+  "title": "Foot strength (3 exercises)",
+  "category": [
+   "feet",
+   "ankles",
+   "mobility/rehab"
+  ],
+  "equipment": [
+   "towel",
+   "seat/box",
+   "2 yoga blocks"
+  ],
+  "frequency": "3x per week",
+  "duration_min": "10-15",
+  "difficulty": "beginner-intermediate",
+  "exercises": [
+   {
+    "name": "Towel toe curl and extension (arch crunch)",
+    "sets": 3,
+    "reps": "10, 5 s hold",
+    "equipment": "towel, seat",
+    "cues": "Press big toe, outside of foot and heel down; curl the towel in with your toes, hold 5 s, then spread toes and push it back out.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Forced-arch single-leg heel raise",
+    "sets": 3,
+    "reps": "10 per side",
+    "equipment": "1 yoga block between the shins",
+    "cues": "Press big toe down and raise one heel, then alternate; the block forces the arch to lift.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Foot-bridge split squat",
+    "sets": 3,
+    "reps": "10 per side",
+    "equipment": "2 yoga blocks under front foot (heel and ball, arch unsupported)",
+    "cues": "Split squat with the front foot bridged; keep the front knee tracking over the toes.",
+    "caution": "Knock-knees: don't let the knee cave in. Hold onto something at first.",
+    "hernia_risk": "low",
+    "knee_risk": "moderate"
+   }
+  ],
+  "notes": "Low hernia risk (no heavy load or bracing). Good fit for foot and ankle rehab, but check with Ft. Sixto Curipoma. The app shows a 4th exercise not in the video: towel toe spacer with adduction and abduction, 3 x 10 s hold per side.",
+  "hernia_risk": "low",
+  "knee_risk": "moderate"
+ },
+ {
+  "id": "DfiTJijMlPQ",
+  "source": "https://www.instagram.com/reel/DfiTJijMlPQ/",
+  "video": "/workspace/reels/DfiTJijMlPQ.mp4",
+  "added": "2026-11-12",
+  "title": "Legs up the wall (30-day lower-back relief)",
+  "category": "mobility / recovery",
+  "equipment": [
+   "wall",
+   "floor or mat"
+  ],
+  "frequency": "daily for 30 days",
+  "duration_min": "3-10",
+  "difficulty": "beginner",
+  "notes": "Passive restorative pose to offload lower back after sitting. Get in by sitting sideways against the wall and rolling onto the back while swinging legs up; avoid lifting both straight legs (core strain, hernia). Safe for knock-knees (no knee load).",
+  "exercises": [
+   {
+    "name": "Legs up the wall",
+    "sets": 1,
+    "reps": "hold: week 1 3 min, week 2 5 min, weeks 3-4 10 min",
+    "equipment": "wall",
+    "cues": "Flat on back, legs straight up the wall at ~90°; bend knees slightly if hamstrings are tight. Week 4: add slow deep belly breaths.",
+    "caution": "Roll in from the side; don't do a double straight-leg raise. Don't force belly breaths hard.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   }
+  ],
+  "hernia_risk": "low",
+  "knee_risk": "low"
+ },
+ {
+  "id": "DfpkU5Qs04J",
+  "source": "https://www.instagram.com/reel/DfpkU5Qs04J/",
+  "video": "/workspace/reels/DfpkU5Qs04J.mp4",
+  "added": "2026-11-12",
+  "title": "Sciatica relief (3 moves, Back Pain Academy)",
+  "category": "mobility / recovery",
+  "equipment": [
+   "mat"
+  ],
+  "frequency": "as needed",
+  "duration_min": 5,
+  "difficulty": "easy",
+  "notes": "Don't stretch sciatica with toe-touches; calm the nerve instead. Retest with a gentle straight-leg raise after. No sets/reps given. Hernia: prone work puts pressure on the belly and press-ups stretch the abdominal wall; go gently, stop on hernia discomfort, exhale on effort. Knees: no inward load.",
+  "exercises": [
+   {
+    "name": "Press-ups (sphinx to cobra)",
+    "sets": null,
+    "reps": "slow reps",
+    "equipment": "mat",
+    "cues": "Lie face down, rest on elbows first, then push chest up and down; work up to full arm extension with hips on floor",
+    "caution": "Prone + abdominal stretch: stay on elbows (sphinx) if the hernia feels pulled",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Sciatic nerve floss",
+    "sets": null,
+    "reps": "continuous",
+    "equipment": "mat",
+    "cues": "On back, hip and knee at 90, hold behind thigh, straighten knee to the point of tension then bend; increase range gradually",
+    "caution": "Hold the thigh with your hands so the abs don't have to work",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Prone hip extension",
+    "sets": null,
+    "reps": "repeated",
+    "equipment": "mat",
+    "cues": "Face down, legs straight, lift the affected leg as high as comfortable and lower",
+    "caution": "Lying on the belly; small range, no breath-holding",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   }
+  ],
+  "hernia_risk": "moderate",
+  "knee_risk": "low"
+ },
+ {
+  "id": "Dfp63o1JbHn",
+  "source": "https://www.instagram.com/reel/Dfp63o1JbHn/",
+  "video": "/workspace/reels/Dfp63o1JbHn.mp4",
+  "added": "2026-11-12",
+  "title": "Back mobility when you're afraid to move (Ground app, 3 moves)",
+  "category": "mobility",
+  "equipment": [
+   "mat"
+  ],
+  "frequency": "2-3x per week",
+  "duration_min": 8,
+  "difficulty": "moderate",
+  "notes": "20 reps per exercise. No narration. Opens with an unnumbered wide-stance hinge into deep sumo squat. CAUTION for Sebas: shinbox loads knees inward (genu valgo) and scorpion stretches/twists the abdominal wall (hernia); floor roll sit-up spikes abdominal pressure. Use modified versions or skip.",
+  "exercises": [
+   {
+    "name": "Floor roll to forward fold",
+    "sets": 1,
+    "reps": 20,
+    "equipment": "mat",
+    "cues": "Roll side to side across the back, sit up into a 90/90-like position, fold forward over the front knee",
+    "caution": "Rolling sit-up raises abdominal pressure; push up with your hands instead of crunching up",
+    "hernia_risk": "high",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Shinbox (90/90 switches)",
+    "sets": 1,
+    "reps": 20,
+    "equipment": "mat",
+    "cues": "Sit, knees bent, drop both knees side to side pivoting on heels, twist torso with hands behind",
+    "caution": "High risk for knock-knees: back leg in internal rotation pushes knee inward; keep feet wide, small range, or skip",
+    "hernia_risk": "low",
+    "knee_risk": "high"
+   },
+   {
+    "name": "Scorpion",
+    "sets": 1,
+    "reps": 20,
+    "equipment": "mat",
+    "cues": "Face down, hands by chest, swing bent leg across body toward opposite side",
+    "caution": "High risk for hernia (abdominal stretch + twist); swap for a lying-on-back knee-drop twist",
+    "hernia_risk": "high",
+    "knee_risk": "low"
+   }
+  ],
+  "hernia_risk": "high",
+  "knee_risk": "high"
+ },
+ {
+  "id": "DfolooGqq_H",
+  "source": "https://www.instagram.com/reel/DfolooGqq_H/",
+  "video": "/workspace/reels/DfolooGqq_H.mp4",
+  "added": "2026-11-12",
+  "title": "Ankle & Achilles strength (7 moves)",
+  "category": "strength / foot & ankle",
+  "equipment": [
+   "resistance band",
+   "bench",
+   "step or box",
+   "slant board",
+   "balance pad",
+   "kettlebell"
+  ],
+  "frequency": null,
+  "duration_min": 15,
+  "difficulty": "moderate",
+  "notes": "No sets/reps given in reel. Good for padel ankle prep. Moves 1-3 are low risk; keep knee over middle toes on 3-6; 6 do without weight first (hernia); 7 box jumps are high risk for hernia + knee valgus, save for later.",
+  "exercises": [
+   {
+    "name": "Seated banded plantar flexion",
+    "sets": null,
+    "reps": null,
+    "equipment": "band, bench",
+    "cues": "Point toes against band, slow return",
+    "caution": "Low risk",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Seated banded ankle eversion",
+    "sets": null,
+    "reps": null,
+    "equipment": "band, bench, small block",
+    "cues": "Push foot outward, keep knee and thigh still",
+    "caution": "Low risk",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Seated banded toe-outs (both feet)",
+    "sets": null,
+    "reps": null,
+    "equipment": "band, bench",
+    "cues": "Heels planted, pivot toes outward",
+    "caution": "Keep knees still, don't let them cave in",
+    "hernia_risk": "low",
+    "knee_risk": "moderate"
+   },
+   {
+    "name": "Single-leg slant board calf raise",
+    "sets": null,
+    "reps": null,
+    "equipment": "slant board",
+    "cues": "Push through big toe, full range",
+    "caution": "Knee tracks over middle toes",
+    "hernia_risk": "low",
+    "knee_risk": "moderate"
+   },
+   {
+    "name": "Single-leg deficit calf raise",
+    "sets": null,
+    "reps": null,
+    "equipment": "step",
+    "cues": "Heel drops below step, rise to tiptoe",
+    "caution": "Watch knee caving at the bottom",
+    "hernia_risk": "low",
+    "knee_risk": "moderate"
+   },
+   {
+    "name": "Single-leg balance with kettlebell pass",
+    "sets": null,
+    "reps": null,
+    "equipment": "balance pad, kettlebell",
+    "cues": "Slight knee bend, pass bell hand to hand",
+    "caution": "Hernia: start without weight; push knee slightly out",
+    "hernia_risk": "moderate",
+    "knee_risk": "moderate"
+   },
+   {
+    "name": "Box jumps",
+    "sets": null,
+    "reps": null,
+    "equipment": "box",
+    "cues": "Land softly in partial squat",
+    "caution": "High risk for hernia and knee valgus; skip for now",
+    "hernia_risk": "high",
+    "knee_risk": "high"
+   }
+  ],
+  "hernia_risk": "high",
+  "knee_risk": "high"
+ },
+ {
+  "id": "DfqgUsVqgP1",
+  "source": "https://www.instagram.com/reel/DfqgUsVqgP1/",
+  "video": "/workspace/reels/DfqgUsVqgP1.mp4",
+  "added": "2026-11-12",
+  "title": "Lower-back extension with half-frog leg (@yoga_with_gokul)",
+  "category": "mobility",
+  "equipment": [
+   "mat"
+  ],
+  "frequency": null,
+  "duration_min": 3,
+  "difficulty": "easy",
+  "notes": "6-8 slow reps per side, steady breathing. CAUTION: deep prone press-up stretches the abdominal wall (hernia). Safer swaps: shallow cat-cow for spine, upright kneeling hip-flexor stretch with glute squeeze.",
+  "exercises": [
+   {
+    "name": "Prone cobra with half-frog leg",
+    "sets": 1,
+    "reps": "6-8 per side",
+    "equipment": "mat",
+    "cues": "Lie face down, hands by ribs; slide one knee out to the side bent ~90; press up lifting chest with hips low; lower slowly",
+    "caution": "Hernia: deep back arch stretches abs; keep it a small sphinx-height lift or swap. Don't force the bent knee flat",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Swap: shallow cat-cow",
+    "sets": 1,
+    "reps": "6-8",
+    "equipment": "mat",
+    "cues": "On all fours, round and gently arch",
+    "caution": "Keep the arch shallow",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Swap: kneeling hip-flexor stretch",
+    "sets": 1,
+    "reps": "30 s per side",
+    "equipment": "pad",
+    "cues": "Half-kneel, torso upright, squeeze back glute, shift slightly forward",
+    "caution": "Don't arch the lower back",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   }
+  ],
+  "hernia_risk": "moderate",
+  "knee_risk": "low"
+ },
+ {
+  "id": "DfNYZJ_P7pT",
+  "source": "https://www.instagram.com/reel/DfNYZJ_P7pT/",
+  "video": "/workspace/reels/DfNYZJ_P7pT.mp4",
+  "added": "2026-11-13",
+  "title": "Glute activation after sitting (wall single-leg bridge, @anatomy.of.motion)",
+  "category": "activation/mobility",
+  "equipment": [
+   "wall",
+   "mat"
+  ],
+  "frequency": null,
+  "duration_min": null,
+  "difficulty": "easy",
+  "notes": "Sitting tightens hip flexors and limits hip extension so glutes don't engage. Reel gives no sets/reps.",
+  "exercises": [
+   {
+    "name": "Wall-supported single-leg glute bridge (incremental)",
+    "sets": null,
+    "reps": null,
+    "equipment": "wall, mat",
+    "cues": "On your back, feet on the wall hip-width apart, shins parallel to the floor. Pull the other knee to your chest, stopping before you feel a pinch at the front of the hip. Push into the wall and exhale to lift the hips a little, inhale, then on the next exhale lift a little higher. Stop before the low back takes over or arches. Lower, reset. Keep the toes relaxed.",
+    "caution": "Hernia: low risk; exhale as you push and don't bear down or hold your breath with the knee pulled in. Knock-knees: moderate; the reel's cue to press through the inside heel and big toe can make the knee cave in, so press evenly through the whole foot and keep the knee pointing straight in line with hip and toes.",
+    "hernia_risk": "low",
+    "knee_risk": "moderate"
+   }
+  ],
+  "hernia_risk": "low",
+  "knee_risk": "moderate"
+ },
+ {
+  "id": "DcuHt3YSdKJ",
+  "source": "https://www.instagram.com/reel/DcuHt3YSdKJ/",
+  "video": "/workspace/reels/DcuHt3YSdKJ.mp4",
+  "added": "2026-11-13",
+  "title": "Core routine for back pain (physio, 5 moves)",
+  "category": "core",
+  "equipment": [
+   "mat"
+  ],
+  "frequency": null,
+  "duration_min": null,
+  "difficulty": "easy-moderate",
+  "notes": "No voiceover; parameters from on-screen text. Safer versions are suggestions, not from the reel.",
+  "exercises": [
+   {
+    "name": "Glute bridge",
+    "sets": 3,
+    "reps": "30",
+    "equipment": "mat",
+    "cues": "On your back, knees bent, push hips to ceiling.",
+    "caution": "Moderate: 30 reps invites straining; try 10-15. Band above knees and push out so knees don't cave.",
+    "hernia_risk": "moderate",
+    "knee_risk": "moderate"
+   },
+   {
+    "name": "Dead bug",
+    "sets": 3,
+    "reps": "30 s",
+    "equipment": "mat",
+    "cues": "Back flat, knees 90°, arms up; lower opposite arm and leg.",
+    "caution": "High hernia risk with straight legs; keep knees bent and do toe taps, or move only arms. Breathe.",
+    "hernia_risk": "high",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Cat-cow",
+    "sets": 3,
+    "reps": "1 min",
+    "equipment": "mat",
+    "cues": "Hands and knees, alternate arching and rounding.",
+    "caution": "Moderate: keep it a small, gentle range; no deep arch or hard crunch.",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Bird dog",
+    "sets": 3,
+    "reps": "20 each side",
+    "equipment": "mat",
+    "cues": "Hands and knees, extend opposite arm and leg.",
+    "caution": "Moderate: high volume; try 8-10 per side; slide one limb at a time if it strains.",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Side plank",
+    "sets": 3,
+    "reps": "1 min each side",
+    "equipment": "mat",
+    "cues": "On elbow and feet, or on bottom knee (modified).",
+    "caution": "High hernia risk with 1-min holds; do 4-6 holds of 10 s, breathe normally, knee version with padding.",
+    "hernia_risk": "high",
+    "knee_risk": "low"
+   }
+  ],
+  "hernia_risk": "high",
+  "knee_risk": "moderate"
+ },
+ {
+  "id": "DfrowA2PGNu",
+  "source": "https://www.instagram.com/reel/DfrowA2PGNu/",
+  "also": "https://www.threads.com/@deee.fit/post/DfrpNBfkuwC",
+  "video": "/workspace/reels/DfrowA2PGNu.mp4",
+  "added": "2026-11-13",
+  "title": "Kettlebell fat-burning circuit (@deee.fit, 5 moves)",
+  "category": "conditioning",
+  "equipment": [
+   "kettlebell",
+   "mat"
+  ],
+  "frequency": null,
+  "duration_min": 15,
+  "difficulty": "hard",
+  "notes": "3 rounds, 30 s work / 30 s rest per move (~15 min). HIGH RISK overall for hernia and knock-knees: explosive, swung, overhead and rotational loads. Not recommended until cleared; use safer swaps.",
+  "exercises": [
+   {
+    "name": "Reverse lunge gorilla swing",
+    "sets": 3,
+    "reps": "30 s work / 30 s rest",
+    "equipment": "1 kettlebell",
+    "cues": "Step back into a lunge while swinging the bell between the legs; stand and swing it to chest height.",
+    "caution": "High: swung load needs hard bracing; front knee likely to cave. Swap: bodyweight split squat holding a wall, knee over toes.",
+    "hernia_risk": "high",
+    "knee_risk": "high"
+   },
+   {
+    "name": "Squat pullover",
+    "sets": 3,
+    "reps": "30 s work / 30 s rest",
+    "equipment": "1 kettlebell",
+    "cues": "Bell held overhead by the horns; deep squat lowering it behind the head, press back up as you stand.",
+    "caution": "High: overhead load in a deep squat. Swap: seated overhead triceps extension, light; or shallow wall sit.",
+    "hernia_risk": "high",
+    "knee_risk": "moderate"
+   },
+   {
+    "name": "Front raise curl",
+    "sets": 3,
+    "reps": "30 s work / 30 s rest",
+    "equipment": "1 kettlebell",
+    "cues": "Tall kneeling, press bell out from chest, back in, then curl down to waist.",
+    "caution": "Moderate-high for hernia (long lever); knees low risk. Swap: seated curls with back support.",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Lunge halo",
+    "sets": 3,
+    "reps": "30 s work / 30 s rest",
+    "equipment": "1 kettlebell",
+    "cues": "Reverse lunge while circling the bell around the head, alternating sides.",
+    "caution": "High: overhead and rotational with unstable base. Swap: light seated halo.",
+    "hernia_risk": "high",
+    "knee_risk": "moderate"
+   },
+   {
+    "name": "Over shoulder toss",
+    "sets": 3,
+    "reps": "30 s work / 30 s rest",
+    "equipment": "1 kettlebell",
+    "cues": "Explosively drive the bell over one shoulder and back, alternating (not released).",
+    "caution": "Very high: explosive rotation. Skip. Swap: light seated shoulder press.",
+    "hernia_risk": "high",
+    "knee_risk": "moderate"
+   }
+  ],
+  "hernia_risk": "high",
+  "knee_risk": "high"
+ },
+ {
+  "id": "DflP3ALB8eF",
+  "source": "https://www.instagram.com/reel/DflP3ALB8eF/",
+  "video": "/workspace/reels/DflP3ALB8eF.mp4",
+  "added": "2026-11-13",
+  "title": "Big toe strength & ankle stability: banded isometric heel raise",
+  "category": "foot & ankle strength",
+  "equipment": [
+   "resistance band",
+   "stable anchor (rack/post)"
+  ],
+  "frequency": "not stated",
+  "duration_min": 3,
+  "difficulty": "beginner-intermediate",
+  "notes": "Coach Milad and Ryan. Aims to stop the foot collapsing inward and knees caving. Ends with an app pitch. Hernia: breathe steadily through holds. Knock-knees: start with no band, then a very light one, use a mirror; skip the split squat progression until flawless.",
+  "exercises": [
+   {
+    "name": "Banded isometric heel raise",
+    "sets": 3,
+    "reps": "45s hold per side",
+    "equipment": "band anchored low, looped under the ankle bones, pulling the ankle inward",
+    "cues": [
+     "Step away so the band pulls the ankle inward",
+     "Lift heel toward the ceiling",
+     "Press the big toe into the ground",
+     "Feel the burn in the outer ankle/calf (supinators)"
+    ],
+    "caution": "Moderate for knock-knees: a heavy band pulls the ankle and knee inward. Start with no band, then the lightest band, watch the knee in a mirror. Hold a wall for balance, breathe steadily, no breath holding.",
+    "hernia_risk": "low",
+    "knee_risk": "moderate"
+   },
+   {
+    "name": "Floating split squat with banded heel raise (progression)",
+    "sets": "not stated",
+    "reps": "not stated",
+    "equipment": "same band setup",
+    "cues": [
+     "Keep the front heel lifted and big toe pressed while doing split squats"
+    ],
+    "caution": "High for knock-knees and hernia (bracing under load). Skip for now.",
+    "hernia_risk": "high",
+    "knee_risk": "high"
+   }
+  ],
+  "hernia_risk": "high",
+  "knee_risk": "high"
+ },
+ {
+  "id": "DfuirKgB8FQ",
+  "source": "https://www.instagram.com/reel/DfuirKgB8FQ/",
+  "video": "/workspace/reels/DfuirKgB8FQ.mp4",
+  "added": "2026-11-14",
+  "title": "Bodybuilder vs functional: kettlebell swaps for row, press, lunge",
+  "category": "full body (kettlebell swaps)",
+  "equipment": [
+   "kettlebells (1-2)",
+   "dumbbells",
+   "bench"
+  ],
+  "frequency": "not stated",
+  "duration_min": 15,
+  "difficulty": "intermediate",
+  "notes": "Pav Mann. 17s comparison clip, no sets/reps given (duration is an estimate at 3x10). Shows three kettlebell swaps for classic dumbbell moves. Hernia: Gorilla Row and Clean & Press need hard bracing, so start light with steady breathing and no breath holding. Knock-knees: lunges need the knee tracking over the 2nd-3rd toe; the Lunge Catch adds rotation, so master the plain reverse lunge first.",
+  "exercises": [
+   {
+    "name": "Gorilla row (alternating KB row from floor)",
+    "sets": "not stated",
+    "reps": "not stated",
+    "equipment": "2 kettlebells",
+    "cues": [
+     "Hinge with a flat back",
+     "Row one bell while the other stays planted"
+    ],
+    "caution": "Moderate for hernia: braced hinge; go light and breathe out on each pull.",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   },
+   {
+    "name": "KB clean & press (single arm)",
+    "sets": "not stated",
+    "reps": "not stated",
+    "equipment": "1 kettlebell",
+    "cues": [
+     "Clean to rack, then press overhead"
+    ],
+    "caution": "Moderate for hernia: explosive clean and overhead load. Start very light and exhale on the press.",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Alternating reverse lunge with KB pass under front leg",
+    "sets": "not stated",
+    "reps": "not stated",
+    "equipment": "1 kettlebell",
+    "cues": [
+     "Step back, pass the bell under the front thigh to the other hand"
+    ],
+    "caution": "Moderate-high for knock-knees: watch that the front knee doesn't cave in. Master bodyweight reverse lunges first.",
+    "hernia_risk": "moderate",
+    "knee_risk": "moderate"
+   }
+  ],
+  "hernia_risk": "moderate",
+  "knee_risk": "moderate"
+ },
+ {
+  "id": "Dep7J72RqC2",
+  "source": "https://www.instagram.com/reel/Dep7J72RqC2/",
+  "video": "/workspace/reels/Dep7J72RqC2.mp4",
+  "added": "2026-11-14",
+  "title": "Lower back mobility routine (T-spine, window wipers, scorpion, cat cow)",
+  "category": "mobility / lower back",
+  "equipment": [
+   "mat"
+  ],
+  "frequency": "not stated",
+  "duration_min": 10,
+  "difficulty": "beginner",
+  "notes": "Mathew Wright. 5 rounds of 30s each for 4 moves (about 10 min). Bodyweight only, no spoken cues. Hernia: all four involve twisting or abdominal flexion. Go slow and pain-free, breathe out through the twist, and skip any move that pushes out on the hernia. Knock-knees: no knee load, so it's fine.",
+  "exercises": [
+   {
+    "name": "Seated T-spine rotation",
+    "sets": 5,
+    "reps": "30s",
+    "equipment": "mat",
+    "cues": [
+     "Sit leaning back on your hands, knees bent",
+     "Reach one hand across to the opposite knee, alternate"
+    ],
+    "caution": "Moderate for hernia: the lean-back brace plus twist. Sit more upright to reduce load.",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Window wipers (bent knees)",
+    "sets": 5,
+    "reps": "30s",
+    "equipment": "mat",
+    "cues": [
+     "Lie on your back, arms in a T, knees at 90°",
+     "Lower your knees side to side under control"
+    ],
+    "caution": "Moderate-high for hernia: obliques control the legs. Keep your feet on the floor (supine knee drops) to start.",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Scorpion stretch",
+    "sets": 5,
+    "reps": "30s",
+    "equipment": "mat",
+    "cues": [
+     "Lie face down, arms in a T",
+     "Bring one foot across toward the opposite side"
+    ],
+    "caution": "Moderate: deep lumbar and pelvic twist. Go only to a gentle range.",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Cat cow",
+    "sets": 5,
+    "reps": "30s",
+    "equipment": "mat",
+    "cues": [
+     "On all fours, alternate rounding and arching"
+    ],
+    "caution": "Low-moderate: gentle, breathe through it.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   }
+  ],
+  "hernia_risk": "moderate",
+  "knee_risk": "low"
+ },
+ {
+  "id": "DfwZy2LiHW3",
+  "source": "https://www.threads.com/@pontes_misericordiae/post/DfwZy2LiHW3",
+  "video": "/workspace/reels/threads_DfwZy2LiHW3.mp4",
+  "added": "2026-11-15",
+  "title": "Kneeling quad raise to toe-squat (hip flexor / anterior pelvic tilt fix)",
+  "category": "mobility / hip flexors / posture",
+  "equipment": [
+   "mat"
+  ],
+  "frequency": "not stated",
+  "duration_min": null,
+  "difficulty": "advanced",
+  "notes": "@pontes_misericordiae on Threads, 6s loop, no sets or reps given. Overlay claims it fixes anterior pelvic tilt. Hernia: moderate, because the core braces as a bridge while leaning back. Knock-knees and feet: high risk, with deep knee flexion on the toes (valgus collapse) and extreme load on the ankles and plantar fascia. Not recommended for now; a half-kneeling hip flexor stretch is a safer substitute.",
+  "exercises": [
+   {
+    "name": "Kneeling quad raise to toe squat",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "mat",
+    "cues": [
+     "Kneel with shins and tops of feet flat, lean back on your hands",
+     "Lift knees off the mat onto the balls of your feet, then lower slowly"
+    ],
+    "caution": "High for knees, feet and ankles. Moderate for hernia. Swap in a half-kneeling hip flexor stretch with a glute squeeze.",
+    "hernia_risk": "moderate",
+    "knee_risk": "high"
+   }
+  ]
+ },
+ {
+  "id": "DeOwTlTyqlK",
+  "source": "https://www.instagram.com/reel/DeOwTlTyqlK/",
+  "video": "/workspace/reels/DeOwTlTyqlK.mp4",
+  "added": "2026-11-15",
+  "title": "Lower back pain fix: hips, back strength, core (12 moves)",
+  "category": "mobility / lower back / core",
+  "equipment": [
+   "mat",
+   "bench",
+   "foam roller",
+   "box",
+   "dumbbell",
+   "band"
+  ],
+  "frequency": "not stated",
+  "duration_min": null,
+  "difficulty": "beginner-intermediate",
+  "notes": "Fraser Briggs (Movement Skool / Modern Body Fix). 3 blocks of 4 moves (hips, erectors, core). No sets or reps given. Mostly low risk. Hernia: the bench back extension, dumbbell side bend and V-up are moderate, so swap the V-up for a dead bug. Knock-knees: watch the knee on the single-leg airplane.",
+  "exercises": [
+   {
+    "name": "Supported single-leg airplane",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "foam roller, box",
+    "cues": [
+     "Back foot on a roller on the box, hinge forward",
+     "Rotate your torso over the standing hip"
+    ],
+    "caution": "Knock-knees: keep the standing knee over your toes and don't let it cave in. Hold onto something at first.",
+    "hernia_risk": "low",
+    "knee_risk": "moderate"
+   },
+   {
+    "name": "Quadruped hip extension (donkey kick)",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "none",
+    "cues": [
+     "On hands and knees, kick one leg back and squeeze the glute"
+    ],
+    "caution": "Safe.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Seated straddle leg lifts over a roller",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "foam roller",
+    "cues": [
+     "Sit with legs wide and hands behind you",
+     "Lift your straight legs over the roller and back"
+    ],
+    "caution": "Breathe out as you lift.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Couch stretch / half-kneeling hip flexor stretch",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "wall",
+    "cues": [
+     "Back knee down, top of the foot against the wall",
+     "Push your hips forward and squeeze the glute"
+    ],
+    "caution": "Pad the knee. Ease the foot position if your ankle complains.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Reverse hyperextension",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "bench",
+    "cues": [
+     "Lie face down with hips at the edge of the bench",
+     "Lift your straight legs to parallel"
+    ],
+    "caution": "Safe.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Prone Y raise / superman",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "none",
+    "cues": [
+     "Lie face down, arms in a Y",
+     "Lift your chest, arms and legs, then hold briefly"
+    ],
+    "caution": "Safe.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Bench back extension",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "bench",
+    "cues": [
+     "Thighs on the bench, feet anchored",
+     "Lower your torso, then lift to neutral"
+    ],
+    "caution": "Hernia: go slow and don't arch too far.",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Seated good morning",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "bench",
+    "cues": [
+     "Sit with your back straight and hands behind your head",
+     "Hinge forward and come back up"
+    ],
+    "caution": "Safe.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Half-kneeling dumbbell side bend",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "dumbbell",
+    "cues": [
+     "Half-kneeling, bend sideways with the dumbbell"
+    ],
+    "caution": "Hernia: go light and breathe out. Don't hold your breath.",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Alternating V-up",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "none",
+    "cues": [
+     "On your back, crunch and touch your opposite hand to your foot"
+    ],
+    "caution": "Hernia: the most aggressive one here. Swap in a dead bug.",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Spiderman plank",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "none",
+    "cues": [
+     "From a high plank, bring your knee to the outside of your elbow"
+    ],
+    "caution": "Keep your hips level.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Half-kneeling Pallof press with rotation",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "band",
+    "cues": [
+     "Half-kneeling, press the band forward and rotate a little"
+    ],
+    "caution": "Good choice for hernia-safe core work.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   }
+  ]
+ },
+ {
+  "id": "DfyUKSMKQ1y",
+  "source": "https://www.instagram.com/reel/DfyUKSMKQ1y/",
+  "video": "/workspace/reels/DfyUKSMKQ1y.mp4",
+  "added": "2026-11-15",
+  "title": "Banded glute workout on yoga blocks (4 moves)",
+  "category": "legs / glutes",
+  "equipment": [
+   "mini band",
+   "yoga blocks"
+  ],
+  "frequency": "not stated",
+  "duration_min": null,
+  "difficulty": "beginner-intermediate",
+  "notes": "Artem Davidchenko, promoting an 8-week band program. No sets or reps given. Hernia: low. Knock-knees: moderate, because the band pulls the knees in, so push them out. Feet: the soft blocks add instability, so start on a flat floor.",
+  "exercises": [
+   {
+    "name": "Banded lateral step-down from blocks",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "2 yoga blocks, mini band below the knees",
+    "cues": [
+     "One foot on each block, half squat",
+     "Step one foot out and down to the floor, deeper squat, return"
+    ],
+    "caution": "Push your knees out against the band. Do it on the floor before using the blocks.",
+    "hernia_risk": "low",
+    "knee_risk": "moderate"
+   },
+   {
+    "name": "Banded elevated squat on blocks",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "2 yoga blocks, mini band below the knees",
+    "cues": [
+     "One foot on each block, shoulder width",
+     "Squat with your chest up and hips back"
+    ],
+    "caution": "Push your knees out against the band. Do it on the floor first.",
+    "hernia_risk": "low",
+    "knee_risk": "moderate"
+   },
+   {
+    "name": "Banded front-foot-elevated split squat (each side)",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "2 yoga blocks, mini band below the knees",
+    "cues": [
+     "Front foot on the block, back foot on the ball of the foot",
+     "Lower your back knee toward the floor"
+    ],
+    "caution": "High foot and ankle load on a soft block. Start on the floor and add the block later. Keep your front knee over your toes.",
+    "hernia_risk": "low",
+    "knee_risk": "moderate"
+   }
+  ]
+ },
+ {
+  "id": "DewYLgcNUq7",
+  "source": "https://www.instagram.com/reel/DewYLgcNUq7/",
+  "video": "/workspace/reels/DewYLgcNUq7.mp4",
+  "added": "2026-11-15",
+  "title": "Active mobility for a stiff lower back (4 floor moves)",
+  "category": "mobility / lower back / glutes",
+  "equipment": [
+   "mat"
+  ],
+  "frequency": "regularly",
+  "duration_min": 10,
+  "difficulty": "beginner",
+  "notes": "Borja Sanfelix. 5-10 min, pain-free, quality over intensity. No sets or reps given. All floor work. Hernia: low. Knock-knees: only the knee-drop bridge is moderate.",
+  "exercises": [
+   {
+    "name": "Active supine butterfly",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "mat",
+    "cues": [
+     "On your back, soles together, hold your ankles",
+     "Actively press your knees toward the floor"
+    ],
+    "caution": "Safe.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Glute bridge with knee drop (internal rotation)",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "mat",
+    "cues": [
+     "Feet wide, bridge up",
+     "Drop your knees in on the way down, drive them out on the way up"
+    ],
+    "caution": "Knock-knees: this practices the valgus position, so go gentle and small, or skip it.",
+    "hernia_risk": "low",
+    "knee_risk": "moderate"
+   },
+   {
+    "name": "Ankle-grab glute bridge",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "mat",
+    "cues": [
+     "Feet close to your glutes, hold your ankles",
+     "Drive your hips up and hold"
+    ],
+    "caution": "Safe. Ease off if the front of your ankle bothers you.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Isometric single-leg glute bridge",
+    "sets": null,
+    "reps": "not stated",
+    "equipment": "mat",
+    "cues": [
+     "One foot planted, the other leg straight up",
+     "Hold the bridge with your hips level"
+    ],
+    "caution": "Keep the planted knee in line with the foot.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   }
+  ]
+ },
+ {
+  "id": "De2MwPlNUbD",
+  "source": "https://www.instagram.com/reel/De2MwPlNUbD/",
+  "video": "/workspace/reels/De2MwPlNUbD.mp4",
+  "added": "2026-11-15",
+  "title": "4 stretches for stiff hips and lower back",
+  "category": "mobility / hips / lower back",
+  "equipment": [
+   "mat"
+  ],
+  "frequency": "not stated",
+  "duration_min": null,
+  "difficulty": "beginner",
+  "notes": "Banimb Mbappe. Passive stretches, no holds given. Happy baby is safe. Pigeon and 90/90 are moderate for the knees. Frog is high for genu valgo, so skip it. 90/90 has a gentle twist, which matters for the hernia.",
+  "exercises": [
+   {
+    "name": "Happy baby",
+    "sets": null,
+    "reps": "hold, not stated",
+    "equipment": "mat",
+    "cues": [
+     "On your back, knees wide toward your armpits",
+     "Hold the outer edges of your feet and pull gently down"
+    ],
+    "caution": "Safe.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Pigeon (paloma)",
+    "sets": null,
+    "reps": "hold, not stated",
+    "equipment": "mat",
+    "cues": [
+     "Front shin bent across, back leg straight",
+     "Lean forward onto your forearms"
+    ],
+    "caution": "Knee torque. Use a pillow under your hip, or do a figure-4 stretch on your back instead.",
+    "hernia_risk": "low",
+    "knee_risk": "moderate"
+   },
+   {
+    "name": "90/90 twist",
+    "sets": null,
+    "reps": "hold, not stated",
+    "equipment": "mat",
+    "cues": [
+     "Sit in 90/90",
+     "Twist your torso away from the back leg, with one hand for support"
+    ],
+    "caution": "Hernia: twist gently and breathe out. Knees: go easy on the back knee.",
+    "hernia_risk": "moderate",
+    "knee_risk": "moderate"
+   },
+   {
+    "name": "Frog (rana)",
+    "sets": null,
+    "reps": "hold, not stated",
+    "equipment": "mat",
+    "cues": [
+     "On your forearms, knees very wide at 90 degrees",
+     "Push your hips back"
+    ],
+    "caution": "Skip it with genu valgo. There's direct stress on the inner knee. A wide-knee child's pose is gentler.",
+    "hernia_risk": "low",
+    "knee_risk": "high"
+   }
+  ]
+ },
+ {
+  "id": "DeraD8Us21a",
+  "source": "https://www.instagram.com/reel/DeraD8Us21a/",
+  "video": "/workspace/reels/DeraD8Us21a.mp4",
+  "added": "2026-11-15",
+  "title": "Forward head posture: kneeling T-spine rotation + neck flexion stretch",
+  "category": "mobility / neck / posture",
+  "equipment": [
+   "mat"
+  ],
+  "frequency": "not stated",
+  "duration_min": 2,
+  "difficulty": "beginner",
+  "notes": "The Sculptor (Posture Sculpting, #10WEEKS). One flow, about a 10s neck hold, no sets or reps. Low risk for both hernia and knees. Pull your head gently, never hard.",
+  "exercises": [
+   {
+    "name": "Kneeling thoracic rotation to neck flexion stretch",
+    "sets": null,
+    "reps": "rotations + ~10s hold",
+    "equipment": "mat",
+    "cues": [
+     "Kneel leaning forward, hand behind your head, rotate your elbow to the ceiling",
+     "Forearms down, hands clasped behind your head, tuck your chin and pull gently"
+    ],
+    "caution": "Gentle pull on the neck. Stop if you feel tingling.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   }
+  ]
+ },
+ {
+  "id": "DfC2hZFo0iH",
+  "source": "https://www.instagram.com/reel/DfC2hZFo0iH/",
+  "video": "/workspace/reels/DfC2hZFo0iH.mp4",
+  "added": "2026-11-15",
+  "title": "Anterior pelvic tilt protocol in 4 phases (Juan Mota)",
+  "category": "posture / core / glutes",
+  "equipment": [
+   "mat",
+   "cushion"
+  ],
+  "frequency": "3x per week",
+  "duration_min": 15,
+  "difficulty": "beginner",
+  "notes": "Juan Mota. Test: if your whole hand fits behind your lower back against the wall, you have anterior pelvic tilt. Don't stretch the psoas hard. All 4 phases are low risk for hernia and knees. The dead bug is the hernia-safe swap for V-ups.",
+  "exercises": [
+   {
+    "name": "Half-kneeling posterior tilt (reciprocal inhibition)",
+    "sets": 2,
+    "reps": "30s per side",
+    "equipment": "mat",
+    "cues": [
+     "Half-kneeling, tuck your pelvis, squeeze the glute and abs"
+    ],
+    "caution": "Safe.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Isometric dead bug",
+    "sets": 3,
+    "reps": "8 per side, 3s hold at the bottom",
+    "equipment": "mat",
+    "cues": [
+     "Arms up, knees at 90 degrees, lower back pressed into the floor",
+     "Lower one leg to hover, hold 3s, return"
+    ],
+    "caution": "Breathe out as you lower the leg. If your back lifts off the floor, shorten the range.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Glute bridge squeezing a cushion",
+    "sets": 3,
+    "reps": "10, pause at the top",
+    "equipment": "mat, cushion",
+    "cues": [
+     "Cushion between your knees, push through your heels",
+     "Don't arch your back at the top"
+    ],
+    "caution": "The cushion helps keep your knees aligned. Good for genu valgo.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Hip hinge with rib-to-pelvis check",
+    "sets": 3,
+    "reps": "8",
+    "equipment": "none",
+    "cues": [
+     "Thumb on your lowest rib, index finger on your pelvis",
+     "Push your hips back without that distance changing"
+    ],
+    "caution": "Safe.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   }
+  ]
+ },
+ {
+  "id": "DfnMNfxNkTm",
+  "source": "https://www.instagram.com/reel/DfnMNfxNkTm/",
+  "video": "/workspace/reels/DfnMNfxNkTm.mp4",
+  "added": "2026-11-15",
+  "title": "5 kneeling bodyweight core moves, 50 reps a day each",
+  "category": "core / obliques / glutes",
+  "equipment": [
+   "mat"
+  ],
+  "frequency": "daily (claimed)",
+  "duration_min": 10,
+  "difficulty": "beginner",
+  "notes": "Adrián López. The clickbait claims ('belly will disappear', 'erase back pain') are spot-reduction myths, so treat it as light core and glute activation. Pad your knees. Hernia: the twisting reach-backs (heel and floor touches) are moderate, so do them slowly and breathe out.",
+  "exercises": [
+   {
+    "name": "Kneeling hip thrust",
+    "sets": 1,
+    "reps": "50 daily (as claimed)",
+    "equipment": "mat",
+    "cues": [
+     "Kneel tall, hands behind your head",
+     "Sit your hips back toward your heels, then drive them forward"
+    ],
+    "caution": "Squeeze your glutes, don't arch your lower back.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Kneeling alternate heel touch",
+    "sets": 1,
+    "reps": "50 daily (as claimed)",
+    "equipment": "mat",
+    "cues": [
+     "Kneel tall, twist and reach back to the same-side heel"
+    ],
+    "caution": "Twist plus back-bend. Go slow and breathe out.",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Kneeling alternate floor punch (side bend)",
+    "sets": 1,
+    "reps": "50 daily (as claimed)",
+    "equipment": "mat",
+    "cues": [
+     "Side-bend to touch the floor beside your knee"
+    ],
+    "caution": "Controlled pace.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Kneeling lateral crunch",
+    "sets": 1,
+    "reps": "50 daily (as claimed)",
+    "equipment": "mat",
+    "cues": [
+     "Hands behind your head, side-bend left and right"
+    ],
+    "caution": "Safe.",
+    "hernia_risk": "low",
+    "knee_risk": "low"
+   },
+   {
+    "name": "Kneeling twist to touch floor behind feet",
+    "sets": 1,
+    "reps": "50 daily (as claimed)",
+    "equipment": "mat",
+    "cues": [
+     "Twist and reach the floor behind your feet, alternating"
+    ],
+    "caution": "Twisting reach. Go slow and breathe out, and skip it if your hernia pushes out.",
+    "hernia_risk": "moderate",
+    "knee_risk": "low"
+   }
+  ]
+ }
+]
