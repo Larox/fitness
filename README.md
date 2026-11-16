@@ -40,20 +40,29 @@ cp config.example.json config.json
 {
   "libraryPath": "data/sample-library.json",
   "overlayPath": "data/overlay.json",
+  "disclaimerVersion": 1,
+  "disclaimerContact": "A licensed clinician familiar with your health history",
+  "equipment": {
+    "availableBellsKg": [2, 4, 6, 8, 10, 12, 14, 16, 20, 24],
+    "home": { "bellsKg": [6] },
+    "gym": { "bellsKg": [2, 4, 6, 8, 10, 12, 14, 16, 20, 24] }
+  },
   "conditions": [
     {
       "id": "concern_a",
       "label": "Concern A",
+      "description": "Example caution profile A from private config.",
       "libraryField": "concern_a_risk"
     }
-  ],
-  "disclaimerContact": "A licensed clinician familiar with your health history"
+  ]
 }
 ```
 
-- **`conditions`**: each entry maps a configured health concern to a per-exercise field in the library JSON (`libraryField`, typically ending in `_risk` with values `low` | `moderate` | `high`).
+- **`conditions`**: each entry maps a configured health concern to a per-exercise field in the library JSON (`libraryField`, typically ending in `_risk` with values `low` | `moderate` | `high`). An empty array is valid (setup shows an info empty state).
+- **`equipment.availableBellsKg`**, **`equipment.home.bellsKg`**, **`equipment.gym.bellsKg`**: kettlebell defaults and chip options for the Setup screen.
 - **`libraryPath`**: JSON array of routines. In production, set this to a file under `data/private/`.
-- **`disclaimerContact`**: optional string for future UI disclaimers (never hardcoded in source).
+- **`disclaimerVersion`**: bump when disclaimer text or contact changes; users must acknowledge again.
+- **`disclaimerContact`**: optional string shown in the disclaimer sheet (never hardcoded in source).
 
 Import is **fail-closed**: a missing or unknown risk value for any configured condition is treated as `high`.
 
@@ -77,7 +86,7 @@ Do not commit `config.json` or files under `data/private/`.
 4. Run `npm run sync-library -- <export.json>` to refresh the private copy.
 5. Run `npm run ci` (or wire the same paths into your deploy pipeline via env-specific config).
 
-`npm run build` bundles the PWA; slice 1 still renders a shell while library import is validated in tests. Later slices will load `config.json` at build time.
+`npm run build` bundles the PWA. At runtime the app loads `/config.json` (or `/config.example.json` for demos). Malformed config shows an error and blocks planning.
 
 ## Overlay file
 

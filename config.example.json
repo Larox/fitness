@@ -1,17 +1,25 @@
 {
   "libraryPath": "data/sample-library.json",
   "overlayPath": "data/overlay.json",
+  "disclaimerVersion": 1,
+  "disclaimerContact": "A licensed clinician familiar with your health history",
+  "equipment": {
+    "availableBellsKg": [2, 4, 6, 8, 10, 12, 14, 16, 20, 24],
+    "home": { "bellsKg": [6] },
+    "gym": { "bellsKg": [2, 4, 6, 8, 10, 12, 14, 16, 20, 24] }
+  },
   "conditions": [
     {
       "id": "concern_a",
       "label": "Concern A",
+      "description": "Example caution profile A from private config.",
       "libraryField": "concern_a_risk"
     },
     {
       "id": "concern_b",
       "label": "Concern B",
+      "description": "Example caution profile B from private config.",
       "libraryField": "concern_b_risk"
     }
-  ],
-  "disclaimerContact": "A licensed clinician familiar with your health history"
+  ]
 }
