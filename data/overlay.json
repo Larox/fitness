@@ -1,1 +1,12 @@
-{}
+{
+  "ex_f3003327b318c875": {
+    "swap_to": "ex_b9344f23da9f5f67",
+    "max_reps": 8
+  },
+  "ex_f5938cfb5f7344ab": {
+    "max_reps": 6
+  },
+  "ex_217dcfe82bda1ed0": {
+    "max_hold_s": 30
+  }
+}
