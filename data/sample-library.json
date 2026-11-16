@@ -30,6 +30,7 @@
     "title": "Core stability intro",
     "category": ["stability", "intro"],
     "duration_min": 5,
+    "notes": "If bounce is too much, use Swap target stretch instead.",
     "exercises": [
       {
         "name": "Bird hold",
@@ -43,6 +44,12 @@
         "name": "Swap target stretch",
         "reps": "45 s",
         "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Aggressive bounce",
+        "reps": "12",
+        "concern_a_risk": "high",
         "concern_b_risk": "low"
       }
     ],
