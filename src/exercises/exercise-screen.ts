@@ -1,6 +1,30 @@
+import "../media/media.css";
 import type { AppConfig } from "../config/types";
 import type { NormalizedExercise } from "../library/types";
 import { escapeHtml, ICONS } from "../setup/icons";
+import { createUserExerciseId, createUserRoutineId } from "./ids";
+import {
+  cancelMediaImport,
+  commitMediaForSave,
+  commitPendingMediaListRemove,
+  createMediaFlowState,
+  discardUnsavedMedia,
+  hydrateMediaDraft,
+  loadMyExerciseThumbs,
+  markRemove,
+  mediaAttachHtml,
+  onExerciseDeleted,
+  refreshMediaPoster,
+  removeFromMediaList,
+  startMediaImport,
+  undoMediaListRemove,
+  undoRemove,
+  type MediaFlowState,
+} from "./exercise-media-flow";
+import { isMediaDraftDirty } from "../media/draft";
+import { listMediaMeta } from "../media/service";
+import type { ExerciseMediaMeta } from "../media/types";
+import { formatMegabytes, formatDurationMmSs } from "../media/format";
 import { mergePersistedState } from "../setup/merge";
 import type { PersistedAppState } from "../setup/types";
 import type { SettingsStorage } from "../setup/storage";
@@ -25,7 +49,7 @@ import { validateExerciseForm, type ValidationIssue } from "./validation";
 import type { ExerciseFormDraft, UserExercise } from "./types";
 import { normalizeSourceUrl } from "./url";
 
-type View = "my" | "form" | "hurt";
+type View = "my" | "form" | "hurt" | "library" | "media-list";
 
 export interface MountExerciseFlowOptions {
   config: AppConfig;
@@ -64,6 +88,12 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   let attemptedSave = false;
   let statusMessage: string | null = null;
   let explicitFocusId: string | null = null;
+  let editingLibrary: NormalizedExercise | null = null;
+  let draftExerciseId = createUserExerciseId();
+  let draftRoutineId = createUserRoutineId();
+  const mediaState: MediaFlowState = createMediaFlowState(draftExerciseId);
+  let mediaListRows: ExerciseMediaMeta[] = [];
+  let mediaSaveError: string | null = null;
 
   const bar = document.createElement("div");
   bar.className = "exercise-bar";
@@ -142,9 +172,13 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
             .join("")}</ul></div>`
         : "";
 
+    const mediaErr = mediaSaveError
+      ? `<div class="errsum" role="alert"><b>${escapeHtml(mediaSaveError)}</b></div>`
+      : "";
     let html = `<button type="button" class="back" data-act="back-my">‹ My exercises</button>
       <header class="hdr"><h1 class="title" id="exercise-form-title" tabindex="-1">${isEdit ? "Edit exercise" : "Add exercise"}</h1>
       <p class="sub">${isEdit ? "Changes apply from your next plan." : "The coach only plans with exercises in your library."}</p></header>
+      ${mediaErr}
       ${errSummary}
       <div class="sect"><h2>Basics</h2></div><div class="group">
         <div class="field"><label class="flabel" for="ex-name"><b>Name</b><span>Required</span></label>
@@ -194,6 +228,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         .join("")}
         ${draft.cues.length < 6 ? `<div class="field"><button type="button" class="link" data-act="cue-add">+ Add a cue</button></div>` : ""}
       </div>
+      <div id="media-attach-mount">${mediaAttachHtml(mediaState, editing?.id ?? draftExerciseId)}</div>
       <div class="sect"><h2>Source</h2></div><div class="group">
         <div class="field"><label class="flabel" for="ex-link"><b>Link</b></label>
           <input class="textin" id="ex-link" type="url" data-act="link" value="${escapeHtml(draft.link)}" enterKeyHint="done" ${fieldInvalid("link", issues)} />
@@ -240,13 +275,22 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
             ? `<span class="tag tag-warn">${unset} risk not set · won’t be planned</span>`
             : "";
         const isNew = row.newUntil && new Date(row.newUntil) > new Date();
-        return `<button type="button" class="nrow" data-act="open-edit" data-v="${row.id}"><span class="txt"><b>${escapeHtml(row.name)}</b>${isNew ? '<span class="tag tag-new">New</span>' : ""}${tag}<br/><span class="preview">${escapeHtml(formatDosePreview(row.dose))}</span></span>${ICONS.chev}</button>`;
+        const thumb = mediaState.thumbByExerciseId.get(row.id);
+        const thumbHtml = thumb
+          ? `<img class="list-thumb" src="${thumb}" alt="" />`
+          : "";
+        return `<button type="button" class="nrow" data-act="open-edit" data-v="${row.id}">${thumbHtml}<span class="txt"><b>${escapeHtml(row.name)}</b>${isNew ? '<span class="tag tag-new">New</span>' : ""}${tag}<br/><span class="preview">${escapeHtml(formatDosePreview(row.dose))}</span></span>${ICONS.chev}</button>`;
       })
       .join("");
     const importedRows = libraryExercises
       .map(
-        (exercise) =>
-          `<div class="nrow" aria-disabled="true"><span class="txt"><b>${escapeHtml(exercise.name)}</b><br/><span class="preview">${escapeHtml(libraryDoseLabel(exercise))}</span><span class="ds">Imported · read-only</span></span></div>`,
+        (exercise) => {
+          const thumb = mediaState.thumbByExerciseId.get(exercise.id);
+          const thumbHtml = thumb
+            ? `<img class="list-thumb" src="${thumb}" alt="" />`
+            : "";
+          return `<button type="button" class="nrow" data-act="open-library" data-v="${exercise.id}">${thumbHtml}<span class="txt"><b>${escapeHtml(exercise.name)}</b><br/><span class="preview">${escapeHtml(libraryDoseLabel(exercise))}</span><span class="ds">Imported · read-only</span></span>${ICONS.chev}</button>`;
+        },
       )
       .join("");
     return `<button type="button" class="back" data-act="back-settings">‹ Settings</button>
@@ -258,7 +302,65 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       <div class="sect"><h2>Imported · read-only</h2></div>
       <div class="group">${importedRows || `<div class="empty">${ICONS.info}<p>No imported exercises.</p></div>`}</div>
       <div class="sect"><h2>Library</h2></div>
-      <div class="group"><button type="button" class="nrow" data-act="open-hurt"><span class="txt"><b>Marked as hurt</b><span class="ds">${hurtCount} kept out of plans</span></span>${ICONS.chev}</button></div>`;
+      <div class="group">
+        <button type="button" class="nrow" data-act="open-hurt"><span class="txt"><b>Marked as hurt</b><span class="ds">${hurtCount} kept out of plans</span></span>${ICONS.chev}</button>
+        <button type="button" class="nrow" data-act="open-media-list"><span class="txt"><b>Photos and clips</b><span class="ds">${escapeHtml(mediaState.mediaUsageText || "…")}</span></span>${ICONS.chev}</button>
+      </div>`;
+  }
+
+  function renderLibraryDetail(): string {
+    const ex = editingLibrary;
+    if (!ex) {
+      return "";
+    }
+    const risks = config.conditions
+      .map(
+        (c) =>
+          `<div><dt>${escapeHtml(c.label)}</dt><dd>${escapeHtml(ex.conditionRisks[c.id] ?? "high")}</dd></div>`,
+      )
+      .join("");
+    const mediaErr = mediaSaveError
+      ? `<div class="errsum" role="alert"><b>${escapeHtml(mediaSaveError)}</b></div>`
+      : "";
+    return `<button type="button" class="back" data-act="back-my">‹ My exercises</button>
+      <p class="sub" style="text-transform:uppercase;font-size:13px;font-weight:600;color:var(--muted)">Library exercise</p>
+      <h1 class="title" id="exercise-form-title" tabindex="-1">${escapeHtml(ex.name)}</h1>
+      ${mediaErr}
+      <div class="lib-note">${ICONS.info} From your library. Name, dose, cues, source and risk levels can't be edited here. You can add your own photo or clip.</div>
+      <div class="sect"><h2>Details</h2></div><div class="group"><dl class="readonly-dl">
+        <div><dt>Dose</dt><dd>${escapeHtml(libraryDoseLabel(ex))}</dd></div>
+        <div><dt>Equipment</dt><dd>${escapeHtml(ex.equipment ?? "—")}</dd></div>
+      </dl></div>
+      <div class="sect"><h2>Risk per condition</h2></div><div class="group"><dl class="readonly-dl">${risks}</dl></div>
+      <div id="media-attach-mount">${mediaAttachHtml(mediaState, ex.id)}</div>`;
+  }
+
+  function renderMediaList(): string {
+    const rows = mediaListRows
+      .slice()
+      .sort((a, b) => b.bytes - a.bytes)
+      .slice(0, 6);
+    const undo = mediaState.pendingListRemove
+      ? `<div class="undo-row" role="status">Removed from ${escapeHtml(exerciseName(mediaState.pendingListRemove.exerciseId))}.
+          <button type="button" data-act="media-list-undo">Undo</button></div>`
+      : "";
+    const pendingId = mediaState.pendingListRemove?.id;
+    const body = rows
+      .filter((row) => row.id !== pendingId)
+      .map((row) => {
+        const thumb = mediaState.thumbByExerciseId.get(row.exerciseId);
+        return `<div class="restore-row">
+          ${thumb ? `<img class="list-thumb" src="${thumb}" alt="" />` : ""}
+          <div><b>${escapeHtml(exerciseName(row.exerciseId))}</b>
+          <p class="sub">${row.kind === "clip" ? "Clip" : "Photo"}${row.kind === "clip" && row.durationS ? ` · ${formatDurationMmSs(row.durationS)}` : ""} · ${formatMegabytes(row.bytes)}</p></div>
+          <button type="button" class="restore-pill danger" data-act="media-list-remove" data-v="${row.id}">Remove</button>
+        </div>`;
+      })
+      .join("");
+    return `<button type="button" class="back" data-act="back-my">‹ My exercises</button>
+      <h1 class="title" tabindex="-1">Photos and clips</h1>
+      <p class="sub">${escapeHtml(mediaState.mediaUsageText)}</p>
+      <div class="group">${undo}${body}</div>`;
   }
 
   function renderHurtList(): string {
@@ -289,24 +391,51 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   }
 
   function renderBar(): void {
-    if (view === "form") {
-      const dirty = JSON.stringify(draft) !== savedDraftJson;
+    if (view === "form" || view === "library") {
+      const mediaDirty = isMediaDraftDirty(mediaState.draft);
+      const importing = mediaState.draft.status === "uploading";
+      const dirty =
+        view === "library"
+          ? mediaDirty
+          : JSON.stringify(draft) !== savedDraftJson || mediaDirty;
       const unset = unsetRiskCount({ riskChosen: draft.riskChosen }, config.conditions);
       const isEdit = editing !== null;
-      const issues = validateExerciseForm({
-        draft,
-        conditions: config.conditions,
-        libraryExercises,
-        userNames: (persisted.userExercises ?? []).map((e) => ({ id: e.id, name: e.name })),
-        editingId: editing?.id,
-        validateNow: attemptedSave,
-      });
-      const helper = attemptedSave && issues.length
-        ? `Fix ${issues.length} field${issues.length > 1 ? "s" : ""} above to save`
-        : barHelperForRisks(unset, isEdit, dirty);
+      const issues =
+        view === "library"
+          ? []
+          : validateExerciseForm({
+              draft,
+              conditions: config.conditions,
+              libraryExercises,
+              userNames: (persisted.userExercises ?? []).map((e) => ({ id: e.id, name: e.name })),
+              editingId: editing?.id,
+              validateNow: attemptedSave,
+            });
+      let helper =
+        importing
+          ? "Save is ready once the clip is on this phone"
+          : attemptedSave && issues.length
+            ? `Fix ${issues.length} field${issues.length > 1 ? "s" : ""} above to save`
+            : view === "library"
+              ? "Only the photo or clip changes"
+              : barHelperForRisks(unset, isEdit, dirty);
       const danger = attemptedSave && issues.length > 0;
+      const saveLabel =
+        view === "library"
+          ? mediaState.draft.display?.kind === "photo"
+            ? "Save photo"
+            : mediaState.draft.display?.kind === "clip"
+              ? "Save clip"
+              : "Save changes"
+          : isEdit
+            ? "Save changes"
+            : "Save exercise";
+      const disableSave =
+        importing ||
+        (view === "library" && !dirty) ||
+        (view === "form" && isEdit && !dirty);
       bar.innerHTML = `<div class="in"><p class="help ${danger ? "danger" : ""}">${escapeHtml(helper)}</p>
-        <button class="primary" type="button" data-act="save" ${isEdit && !dirty ? "disabled" : ""}>${isEdit ? "Save changes" : "Save exercise"}</button></div>`;
+        <button class="primary" type="button" data-act="save" ${disableSave ? "disabled" : ""}>${saveLabel}</button></div>`;
       bar.style.display = "";
       return;
     }
@@ -316,6 +445,39 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       return;
     }
     bar.style.display = "none";
+  }
+
+  async function refreshMyThumbs(): Promise<void> {
+    await loadMyExerciseThumbs(mediaState);
+    if (view === "my" || view === "media-list") {
+      render();
+    }
+  }
+
+  async function openExerciseMedia(exerciseId: string): Promise<void> {
+    await hydrateMediaDraft(mediaState, exerciseId);
+    render();
+  }
+
+  function refreshMediaAttachMarkup(): void {
+    if (view !== "form" && view !== "library") {
+      render();
+      return;
+    }
+    const mount = root.querySelector("#media-attach-mount");
+    if (!mount) {
+      render();
+      return;
+    }
+    const exerciseId =
+      view === "library" && editingLibrary
+        ? editingLibrary.id
+        : editing?.id ?? draftExerciseId;
+    mount.innerHTML = mediaAttachHtml(mediaState, exerciseId);
+    renderBar();
+    if (explicitFocusId) {
+      document.getElementById(explicitFocusId)?.focus();
+    }
   }
 
   function render(partial = false): void {
@@ -332,6 +494,10 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     root.className = "exercise-shell";
     if (view === "form") {
       root.innerHTML = renderForm();
+    } else if (view === "library") {
+      root.innerHTML = renderLibraryDetail();
+    } else if (view === "media-list") {
+      root.innerHTML = renderMediaList();
     } else if (view === "hurt") {
       root.innerHTML = renderHurtList();
     } else {
@@ -376,7 +542,10 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
       return;
     }
-  saveDraftFieldFromTarget(target, target.value);
+    if (target instanceof HTMLInputElement && target.type === "file") {
+      return;
+    }
+    saveDraftFieldFromTarget(target, target.value);
     if (attemptedSave) {
       render();
       return;
@@ -420,22 +589,45 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     switch (act) {
       case "back-settings":
         commitPendingUndo();
+        void commitPendingMediaListRemove(mediaState);
         persist(persisted);
         onBackToSettings();
         return;
       case "back-my":
+        void discardUnsavedMedia(mediaState).then(() => {
+          editingLibrary = null;
+        });
+        void commitPendingMediaListRemove(mediaState);
         view = "my";
+        void refreshMyThumbs();
         break;
       case "open-hurt":
         view = "hurt";
         break;
+      case "open-library":
+        if (value) {
+          editingLibrary = libraryExercises.find((e) => e.id === value) ?? null;
+          editing = null;
+          view = "library";
+          void openExerciseMedia(value);
+        }
+        break;
+      case "open-media-list":
+        view = "media-list";
+        void (async () => {
+          mediaListRows = await listMediaMeta();
+          await refreshMyThumbs();
+        })();
+        break;
       case "open-edit":
         if (value) {
           editing = persisted.userExercises?.find((e) => e.id === value) ?? null;
+          editingLibrary = null;
           draft = editing ? userExerciseToDraft(editing) : emptyExerciseDraft();
           savedDraftJson = JSON.stringify(draft);
           attemptedSave = false;
           view = "form";
+          void openExerciseMedia(value);
           const row = persisted.userExercises?.find((e) => e.id === value);
           if (row?.newUntil) {
             row.newUntil = undefined;
@@ -445,11 +637,53 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         break;
       case "add-new":
         editing = null;
+        editingLibrary = null;
+        draftExerciseId = createUserExerciseId();
+        draftRoutineId = createUserRoutineId();
         draft = emptyExerciseDraft();
         savedDraftJson = JSON.stringify(draft);
         attemptedSave = false;
         view = "form";
+        void openExerciseMedia(draftExerciseId);
         break;
+      case "media-pick": {
+        root.querySelector<HTMLInputElement>("#media-file-input")?.click();
+        return;
+      }
+      case "media-replace": {
+        root.querySelector<HTMLInputElement>("#media-file-input")?.click();
+        return;
+      }
+      case "media-remove":
+        mediaState.draft = markRemove(mediaState.draft);
+        explicitFocusId = "media-pick-tile";
+        void refreshMediaPoster(mediaState).then(() => refreshMediaAttachMarkup());
+        return;
+      case "media-undo":
+        mediaState.draft = undoRemove(mediaState.draft);
+        explicitFocusId = "media-undo";
+        void refreshMediaPoster(mediaState).then(() => refreshMediaAttachMarkup());
+        return;
+      case "media-cancel":
+        cancelMediaImport(mediaState, () => refreshMediaAttachMarkup());
+        explicitFocusId = "media-pick-tile";
+        return;
+      case "media-list-remove":
+        if (value) {
+          void removeFromMediaList(mediaState, value).then((removed) => {
+            if (removed) {
+              mediaListRows = mediaListRows.filter((row) => row.id !== value);
+            }
+            render();
+          });
+        }
+        return;
+      case "media-list-undo":
+        void undoMediaListRemove(mediaState).then(async () => {
+          mediaListRows = await listMediaMeta();
+          render();
+        });
+        return;
       case "cat":
         if (value) {
           const idx = draft.categories.indexOf(value);
@@ -541,6 +775,22 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         break;
       }
       case "save": {
+        if (view === "library" && editingLibrary) {
+          void (async () => {
+            try {
+              await commitMediaForSave(mediaState, editingLibrary!.id);
+              mediaSaveError = null;
+              view = "my";
+              await refreshMyThumbs();
+              render();
+            } catch {
+              mediaSaveError =
+                "Couldn't save the photo or clip. Your other edits are still here — try again.";
+              render();
+            }
+          })();
+          return;
+        }
         attemptedSave = true;
         const issues = validateExerciseForm({
           draft,
@@ -555,21 +805,49 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
           render();
           return;
         }
-        const saved = draftToUserExercise(draft, editing, new Date());
-        const list = [...(persisted.userExercises ?? [])];
-        const idx = list.findIndex((e) => e.id === saved.id);
-        if (idx >= 0) list[idx] = saved;
-        else list.push(saved);
-        persisted = { ...persisted, userExercises: list };
-        persist(persisted);
-        statusMessage = `Saved “${saved.name}”`;
-        editing = null;
-        view = "my";
-        explicitFocusId = "my-title";
-        break;
+        const placeholder =
+          editing ??
+          ({
+            id: draftExerciseId,
+            routineId: draftRoutineId,
+            name: draft.name,
+            categories: [],
+            equipment: "",
+            cues: [],
+            dose: draft.dose,
+            riskChosen: {},
+            moderateCautions: {},
+            kettlebell: false,
+            createdAt: new Date().toISOString(),
+          } satisfies UserExercise);
+        const saved = draftToUserExercise(draft, placeholder, new Date());
+        void (async () => {
+          try {
+            await commitMediaForSave(mediaState, saved.id);
+            mediaSaveError = null;
+            const list = [...(persisted.userExercises ?? [])];
+            const idx = list.findIndex((e) => e.id === saved.id);
+            if (idx >= 0) list[idx] = saved;
+            else list.push(saved);
+            persisted = { ...persisted, userExercises: list };
+            persist(persisted);
+            statusMessage = `Saved “${saved.name}”`;
+            editing = null;
+            view = "my";
+            explicitFocusId = "my-title";
+            await refreshMyThumbs();
+            render();
+          } catch {
+            mediaSaveError =
+              "Couldn't save the photo or clip. Your other edits are still here — try again.";
+            render();
+          }
+        })();
+        return;
       }
       case "delete": {
         if (!editing) break;
+        void onExerciseDeleted(editing.id);
         const result = deleteUserExercise(
           editing.id,
           persisted.userExercises ?? [],
@@ -622,20 +900,39 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     bar.classList.toggle("compact", kbOffset > 0);
   }
 
+  function handleMediaFileChange(event: Event): void {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || input.id !== "media-file-input") {
+      return;
+    }
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) {
+      root.querySelector<HTMLButtonElement>("#media-pick-tile")?.focus();
+      return;
+    }
+    void startMediaImport(mediaState, file, () => refreshMediaAttachMarkup());
+  }
+
   document.addEventListener("input", handleInput);
   document.addEventListener("blur", handleBlur, true);
   document.addEventListener("click", handleClick);
+  document.addEventListener("change", handleMediaFileChange);
   document.addEventListener("keydown", handleKeydown);
   window.visualViewport?.addEventListener("resize", syncKeyboardOffset);
   window.visualViewport?.addEventListener("scroll", syncKeyboardOffset);
 
   render();
+  void refreshMyThumbs();
 
   return {
     destroy: () => {
+      void discardUnsavedMedia(mediaState);
+      void commitPendingMediaListRemove(mediaState);
       document.removeEventListener("input", handleInput);
       document.removeEventListener("blur", handleBlur, true);
       document.removeEventListener("click", handleClick);
+      document.removeEventListener("change", handleMediaFileChange);
       document.removeEventListener("keydown", handleKeydown);
       window.visualViewport?.removeEventListener("resize", syncKeyboardOffset);
       window.visualViewport?.removeEventListener("scroll", syncKeyboardOffset);
