@@ -8,6 +8,7 @@ import {
 } from "../exercises/persisted";
 import { sanitizeWeekPlan } from "../plan/persisted";
 import type { PersistedAppState, TrainingSettings } from "./types";
+import { pruneConditionOverrides, sanitizeConditionOverrides } from "./condition-overrides";
 import { defaultTrainingSettings } from "./defaults";
 import {
   normalizeDaysPerWeek,
@@ -130,10 +131,17 @@ export function mergePersistedState(
     };
   }
 
+  const conditionOverrides = pruneConditionOverrides(
+    sanitizeConditionOverrides(stored.conditionOverrides, config),
+    config,
+  );
+
   return {
     ...pickDisclaimerFields(stored),
     setupComplete: stored.setupComplete === true,
     settings: sanitizeTrainingSettings(stored.settings, config),
+    conditionOverrides:
+      Object.keys(conditionOverrides).length > 0 ? conditionOverrides : undefined,
     userExercises: sanitizeUserExercises(stored.userExercises),
     hurtExclusions: sanitizeHurtExclusions(stored.hurtExclusions),
     pendingHurtRestore: sanitizePendingHurtRestore(stored.pendingHurtRestore),

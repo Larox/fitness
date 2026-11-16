@@ -11,6 +11,12 @@ import {
   formatAcknowledgedDate,
   needsDisclaimerAcknowledgement,
 } from "./disclaimer";
+import { createConditionLabelContext } from "./condition-labels";
+import {
+  mountConditionEditScreen,
+  notesPreview,
+} from "./condition-edit-screen";
+import { pruneConditionOverrides } from "./condition-overrides";
 import { escapeHtml, ICONS } from "./icons";
 import { applyTrainingSettingsSave } from "../plan/apply-settings-save";
 import type { PlanBuildContext } from "../plan/apply-settings-save";
@@ -33,6 +39,8 @@ interface ScreenState {
   draft: TrainingSettings;
   saved: TrainingSettings;
   sheet: SheetMode;
+  editingConditionId: string | null;
+  conditionSavedBanner: { id: string; name: string } | null;
 }
 
 export interface MountSetupScreenOptions {
@@ -122,7 +130,11 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
     draft: cloneSettings(persisted.settings),
     saved,
     sheet: needsDisclaimerAcknowledgement(persisted, config) ? "blocking" : null,
+    editingConditionId: null,
+    conditionSavedBanner: null,
   };
+
+  let conditionEdit: ReturnType<typeof mountConditionEditScreen> | null = null;
 
   const bar = document.createElement("div");
   bar.className = "bar";
@@ -181,12 +193,78 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
     scope.querySelector<HTMLElement>(selector)?.focus();
   }
 
+  function withPrunedOverrides(state: PersistedAppState): PersistedAppState {
+    const pruned = pruneConditionOverrides(state.conditionOverrides ?? {}, config);
+    return {
+      ...state,
+      conditionOverrides: Object.keys(pruned).length > 0 ? pruned : undefined,
+    };
+  }
+
   function persist(next: PersistedAppState): void {
-    persisted = next;
-    storage.save(next);
+    persisted = withPrunedOverrides(next);
+    storage.save(persisted);
+  }
+
+  function applyImmediateSettings(draft: TrainingSettings): void {
+    const previous = cloneSettings(screen.saved);
+    const summary = summarizeSettingsChange(previous, draft);
+    screen.draft = cloneSettings(draft);
+    screen.saved = cloneSettings(draft);
+    let next: PersistedAppState = { ...persisted, settings: draft };
+    if (getPlanContext) {
+      next = applyTrainingSettingsSave(next, draft, summary, getPlanContext());
+    }
+    persist(next);
+  }
+
+  function destroyConditionEdit(): void {
+    conditionEdit?.destroy();
+    conditionEdit = null;
+    screen.editingConditionId = null;
+  }
+
+  function openConditionEdit(conditionId: string): void {
+    destroyConditionEdit();
+    screen.editingConditionId = conditionId;
+    screen.conditionSavedBanner = null;
+    conditionEdit = mountConditionEditScreen({
+      config,
+      conditionId,
+      root,
+      bar,
+      layer,
+      getPersisted: () => persisted,
+      persistState: persist,
+      finalizeSave: (next) => {
+        const draft = next.settings;
+        const summary = summarizeSettingsChange(screen.saved, draft);
+        screen.draft = cloneSettings(draft);
+        screen.saved = cloneSettings(draft);
+        let merged = next;
+        if (getPlanContext) {
+          merged = applyTrainingSettingsSave(next, draft, summary, getPlanContext());
+        }
+        persist(merged);
+      },
+      onBack: (focusId) => {
+        destroyConditionEdit();
+        render();
+        root.querySelector<HTMLElement>(`[data-act="cond-edit"][data-v="${CSS.escape(focusId)}"]`)?.focus();
+      },
+      onSaved: (id, name) => {
+        destroyConditionEdit();
+        screen.conditionSavedBanner = { id, name };
+        render();
+        root.querySelector<HTMLElement>("#condition-saved-row")?.focus();
+      },
+    });
   }
 
   function render(): void {
+    if (screen.editingConditionId) {
+      return;
+    }
     const focusKey = captureFocus();
     const ackLabel = formatAcknowledgedDate(persisted.disclaimerAckAt);
     const isSetupMode = screen.mode === "setup";
@@ -198,10 +276,18 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
     const enabledCount = config.conditions.filter(
       (c) => screen.draft.conditionsEnabled[c.id],
     ).length;
+    const conditionLabels = createConditionLabelContext(
+      config,
+      persisted.conditionOverrides ?? {},
+    );
 
     let html = `<header class="hdr"><p class="overline">${isSetupMode ? "Setup" : "Settings"}</p>
       <h1 class="title">${isSetupMode ? "Plan your training" : "Training settings"}</h1>
       <p class="sub">${isSetupMode ? "Pick what fits. You can change any of this later in Settings." : "Changes apply from your next plan."}</p></header>`;
+
+    if (!isSetupMode && screen.conditionSavedBanner) {
+      html += `<div class="undorow" role="status" id="condition-saved-row" tabindex="-1"><p><b>Saved “${escapeHtml(screen.conditionSavedBanner.name)}”</b> Saved on this phone only.</p></div>`;
+    }
 
     if (!isSetupMode && persisted.weekPlan) {
       html += renderThisWeekList(persisted.weekPlan);
@@ -242,7 +328,7 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
 
     if (config.conditions.length === 0) {
       html += `<div class="empty">${ICONS.info}<p><b>No conditions configured.</b> Plans won't apply any condition cautions or swaps. Conditions come from the app's private config, not from this screen.</p></div>`;
-    } else {
+    } else if (isSetupMode) {
       html += config.conditions
         .map((condition) => {
           const enabled = Boolean(screen.draft.conditionsEnabled[condition.id]);
@@ -253,10 +339,34 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
               ${enabled ? "" : `<div class="offnote" role="note">${ICONS.warn}<p><b>Off:</b> its cautions and swaps stop applying. Exercises it rates high-risk can be scheduled.</p></div>`}`;
         })
         .join("");
+    } else {
+      html += config.conditions
+        .map((condition) => {
+          const enabled = Boolean(screen.draft.conditionsEnabled[condition.id]);
+          const label = conditionLabels.conditionLabel(condition.id);
+          const editedTag = conditionLabels.isEdited(condition.id)
+            ? `<span class="etag">Edited</span>`
+            : "";
+          const notesLine = notesPreview(conditionLabels.conditionNotes(condition.id));
+          return `<div class="crow">
+              <button type="button" class="cedit" data-act="cond-edit" data-v="${condition.id}" aria-describedby="cond-edit-hint">
+                <span class="txt"><span class="lb">${escapeHtml(label)}${editedTag}</span><span class="ds">${escapeHtml(notesLine)}</span></span>
+                <span class="chev">${ICONS.chev}</span></button>
+              <span class="vdiv" aria-hidden="true"></span>
+              <button type="button" class="csw" role="switch" aria-checked="${enabled}" data-act="cond-switch" data-v="${condition.id}"
+                aria-label="Use ${escapeHtml(label)} in plans"><span class="switch" aria-hidden="true"></span></button>
+              </div>
+              ${enabled ? "" : `<div class="offnote" role="note">${ICONS.warn}<p><b>Off:</b> its cautions and swaps stop applying. Exercises it rates high-risk can be scheduled.</p></div>`}`;
+        })
+        .join("");
     }
     html += `</div>${
       config.conditions.length
-        ? `<p class="hint" style="padding:0 var(--space-1)">On means plans follow that condition's cautions and swaps. All are on by default.</p>`
+        ? `<p class="hint" id="cond-edit-hint" style="padding:0 var(--space-1)">${
+            isSetupMode
+              ? "On means plans follow that condition's cautions and swaps. All are on by default."
+              : "On means plans follow that condition's cautions and swaps. Tap a name to rename it or edit its notes."
+          }</p>`
         : ""
     }`;
 
@@ -333,6 +443,9 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
   }
 
   function handleClick(event: MouseEvent): void {
+    if (screen.editingConditionId) {
+      return;
+    }
     const target = (event.target as HTMLElement).closest<HTMLElement>("[data-act]");
     if (!target) {
       return;
@@ -375,9 +488,23 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
         screen.draft.gymBellsKg = [...config.equipment.gym.bellsKg];
         break;
       case "cond":
-        if (value) {
+        if (value && screen.mode === "setup") {
           const current = Boolean(screen.draft.conditionsEnabled[value]);
           screen.draft.conditionsEnabled[value] = !current;
+        }
+        break;
+      case "cond-edit":
+        if (value) {
+          openConditionEdit(value);
+          return;
+        }
+        break;
+      case "cond-switch":
+        if (value && screen.mode === "settings") {
+          screen.conditionSavedBanner = null;
+          const draft = cloneSettings(screen.draft);
+          draft.conditionsEnabled[value] = !Boolean(draft.conditionsEnabled[value]);
+          applyImmediateSettings(draft);
         }
         break;
       case "open-disclaimer":
@@ -414,8 +541,8 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
         if (getPlanContext) {
           next = applyTrainingSettingsSave(next, nextSettings, summary, getPlanContext());
         }
-        persisted = next;
         persist(next);
+        screen.conditionSavedBanner = null;
         screen.mode = "settings";
         onSaved?.(next, summary);
         break;
@@ -441,6 +568,7 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
   return {
     getState: () => persisted,
     destroy: () => {
+      destroyConditionEdit();
       document.removeEventListener("click", handleClick);
       document.removeEventListener("keydown", handleKeydown);
       bar.remove();

@@ -5,6 +5,8 @@ export interface SafetyFilterContext {
   conditions: ConditionConfig[];
   /** Condition ids that participate in blocking (typically all on at setup). */
   activeConditionIds: ReadonlySet<string>;
+  /** Display labels after on-device renames; filtering still keys on ids only. */
+  conditionLabel?: (id: string) => string;
   /** Exercise ids the user marked as painful; never scheduled. */
   excludedExerciseIds: ReadonlySet<string>;
   /** Full imported library, keyed by exercise id (for swap targets). */

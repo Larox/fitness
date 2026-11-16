@@ -1,6 +1,7 @@
 import type { HurtRestoreUndo } from "../exercises/hurt";
 import type { DeletedExerciseRecord, HurtExclusion, UserExercise } from "../exercises/types";
 import type { WeekPlan } from "../plan/types";
+import type { ConditionOverrides } from "./condition-overrides";
 
 /** User training preferences persisted on device. */
 export interface TrainingSettings {
@@ -21,6 +22,8 @@ export interface PersistedAppState {
   disclaimerAckAt?: string;
   /** Whether the user finished first-run setup. */
   setupComplete: boolean;
+  /** Per-condition name and notes overrides, keyed by config id. */
+  conditionOverrides?: ConditionOverrides;
   userExercises?: UserExercise[];
   hurtExclusions?: HurtExclusion[];
   /** Restored exclusion awaiting undo or navigation away to commit. */

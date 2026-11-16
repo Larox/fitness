@@ -11,6 +11,7 @@ export interface PlanBuildContext {
   exercisesById: ReadonlyMap<string, NormalizedExercise>;
   excludedExerciseIds: ReadonlySet<string>;
   routineNotesById: ReadonlyMap<string, string | undefined>;
+  conditionLabel?: (id: string) => string;
 }
 
 export function applyTrainingSettingsSave(
@@ -32,6 +33,7 @@ export function applyTrainingSettingsSave(
       exercisesById: context.exercisesById,
       excludedExerciseIds: context.excludedExerciseIds,
       routineNotesById: context.routineNotesById,
+      conditionLabel: context.conditionLabel,
     });
     return {
       ...next,
@@ -48,6 +50,7 @@ export function applyTrainingSettingsSave(
       exercisesById: context.exercisesById,
       excludedExerciseIds: context.excludedExerciseIds,
       routineNotesById: context.routineNotesById,
+      conditionLabel: context.conditionLabel,
     });
     return {
       ...next,

@@ -35,6 +35,7 @@ import { loadMediaSettings, saveMediaSettings } from "../media/meta-store";
 import { listMediaMeta } from "../media/service";
 import type { ExerciseMediaMeta, PoseMeta } from "../media/types";
 import { formatMegabytes, formatDurationMmSs } from "../media/format";
+import { createConditionLabelContext } from "../setup/condition-labels";
 import { mergePersistedState } from "../setup/merge";
 import type { PersistedAppState } from "../setup/types";
 import type { SettingsStorage } from "../setup/storage";
@@ -131,6 +132,10 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   let libraryVideoDurationS: number | null = null;
   let libraryRoutineAnimView: "anim" | "clip" = "anim";
   let routineUnfinishedAnim = false;
+
+  function labelsForConditions() {
+    return createConditionLabelContext(config, persisted.conditionOverrides ?? {});
+  }
 
   const bar = document.createElement("div");
   bar.className = "exercise-bar";
@@ -441,8 +446,9 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     if (config.conditions.length === 0) {
       html += `<div class="empty">${ICONS.info}<p><b>No conditions configured.</b> Risk levels aren’t needed. The exercise can be planned as soon as you save it.</p></div>`;
     } else {
+      const conditionLabels = labelsForConditions();
       html += config.conditions
-        .map((c) => renderRiskSegment(c.id, c.label, draft))
+        .map((c) => renderRiskSegment(c.id, conditionLabels.conditionLabel(c.id), draft))
         .join("");
     }
     html += `</div>`;
@@ -513,10 +519,11 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     if (!ex) {
       return "";
     }
+    const conditionLabels = labelsForConditions();
     const risks = config.conditions
       .map(
         (c) =>
-          `<div><dt>${escapeHtml(c.label)}</dt><dd>${escapeHtml(ex.conditionRisks[c.id] ?? "high")}</dd></div>`,
+          `<div><dt>${escapeHtml(conditionLabels.conditionLabel(c.id))}</dt><dd>${escapeHtml(ex.conditionRisks[c.id] ?? "high")}</dd></div>`,
       )
       .join("");
     const mediaErr = mediaSaveError

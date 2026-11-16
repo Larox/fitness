@@ -9,6 +9,8 @@ export function resolveModerateCautionLines(
   conditions: readonly ConditionConfig[],
   riskByCondition: Record<string, RiskLevel>,
   customByCondition: Record<string, string>,
+  conditionLabel: (id: string) => string = (id) =>
+    conditions.find((c) => c.id === id)?.label ?? id,
 ): string[] {
   const lines: string[] = [];
   for (const condition of conditions) {
@@ -16,7 +18,7 @@ export function resolveModerateCautionLines(
       continue;
     }
     const custom = customByCondition[condition.id]?.trim();
-    lines.push(custom || genericModerateCautionLine(condition.label));
+    lines.push(custom || genericModerateCautionLine(conditionLabel(condition.id)));
   }
   return lines;
 }

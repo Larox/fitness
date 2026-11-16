@@ -14,6 +14,13 @@ const RISK_ORDER: Record<RiskLevel, number> = {
   high: 2,
 };
 
+function resolveConditionLabel(
+  context: SafetyFilterContext,
+  condition: ConditionConfig,
+): string {
+  return context.conditionLabel?.(condition.id) ?? condition.label;
+}
+
 function maxRiskLevel(a: RiskLevel, b: RiskLevel): RiskLevel {
   return RISK_ORDER[a] >= RISK_ORDER[b] ? a : b;
 }
@@ -117,6 +124,7 @@ function buildScheduled(
   reasons: string[],
   conditions: ConditionConfig[],
   activeConditionIds: ReadonlySet<string>,
+  conditionLabel: (id: string) => string,
 ): ScheduledExercise {
   const cautions: string[] = [];
   const moderate = activeModerateConditions(scheduled, conditions, activeConditionIds);
@@ -127,6 +135,7 @@ function buildScheduled(
           moderate,
           scheduled.conditionRisks,
           scheduled.moderateCautionsByCondition,
+          conditionLabel,
         ),
       );
     } else if (scheduled.caution) {
@@ -137,6 +146,7 @@ function buildScheduled(
           moderate,
           scheduled.conditionRisks,
           {},
+          conditionLabel,
         ),
       );
     }
@@ -159,7 +169,7 @@ function dropHighRisk(
   blocking: ConditionConfig[],
   context: SafetyFilterContext,
 ): DroppedExercise {
-  const labelList = blocking.map((c) => c.label).join(", ");
+  const labelList = blocking.map((c) => resolveConditionLabel(context, c)).join(", ");
   const notes = context.routineNotesById?.get(source.routineId);
   return {
     sourceExerciseId: source.id,
@@ -202,6 +212,10 @@ export function filterExercisesForScheduling(
 ): SafetyFilterResult {
   const scheduled: ScheduledExercise[] = [];
   const dropped: DroppedExercise[] = [];
+  const conditionLabel = (id: string): string =>
+    context.conditionLabel?.(id) ??
+    context.conditions.find((c) => c.id === id)?.label ??
+    id;
 
   for (const candidate of candidates) {
     if (
@@ -242,20 +256,27 @@ export function filterExercisesForScheduling(
       );
       if (moderate.length > 0) {
         reasons.push(
-          `Scheduled with caution: moderate risk for ${moderate.map((c) => c.label).join(", ")}.`,
+          `Scheduled with caution: moderate risk for ${moderate.map((c) => conditionLabel(c.id)).join(", ")}.`,
         );
       } else {
         reasons.push("Scheduled.");
       }
       scheduled.push(
-        buildScheduled(candidate, candidate, reasons, context.conditions, context.activeConditionIds),
+        buildScheduled(
+          candidate,
+          candidate,
+          reasons,
+          context.conditions,
+          context.activeConditionIds,
+          conditionLabel,
+        ),
       );
       continue;
     }
 
     const swapTarget = resolveSwapTarget(candidate, context);
     if (swapTarget) {
-      const labelList = blocking.map((c) => c.label).join(", ");
+      const labelList = blocking.map((c) => conditionLabel(c.id)).join(", ");
       scheduled.push(
         buildScheduled(
           candidate,
@@ -266,6 +287,7 @@ export function filterExercisesForScheduling(
           ],
           context.conditions,
           context.activeConditionIds,
+          conditionLabel,
         ),
       );
       continue;

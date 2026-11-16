@@ -16,6 +16,7 @@ export interface BuildWeekPlanInput {
   exercisesById: ReadonlyMap<string, NormalizedExercise>;
   excludedExerciseIds?: ReadonlySet<string>;
   routineNotesById?: ReadonlyMap<string, string | undefined>;
+  conditionLabel?: (id: string) => string;
 }
 
 export interface BuildWeekPlanResult {
@@ -217,6 +218,7 @@ export function buildWeeklyPlan(input: BuildWeekPlanInput): BuildWeekPlanResult 
     excludedExerciseIds: input.excludedExerciseIds ?? new Set(),
     exercisesById: input.exercisesById,
     routineNotesById: input.routineNotesById,
+    conditionLabel: input.conditionLabel,
   };
 
   const rows: WeekPlanRow[] = [];
