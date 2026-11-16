@@ -3,7 +3,10 @@ import type { AppConfig } from "../config/types";
 import { renderLibraryVideoSection } from "../library/library-video-section";
 import { shouldShowLibraryRoutineVideo } from "../library/library-video-visibility";
 import { probeLibraryVideoDuration } from "../library/library-video-fetch";
-import { getRoutineLibraryPose } from "../library/routine-pose";
+import {
+  clearRoutineLibraryPose,
+  getRoutineLibraryPose,
+} from "../library/routine-pose";
 import type { NormalizedExercise, NormalizedRoutine } from "../library/types";
 import {
   LibraryVideoPreview,
@@ -31,6 +34,11 @@ import {
   undoRemove,
   type MediaFlowState,
 } from "./exercise-media-flow";
+import {
+  libraryRoutineAnimContextActive,
+  resetMediaFlowForRoutineNavigation,
+  resolvePoseStartTarget,
+} from "./routine-media-flow";
 import { loadMediaSettings, saveMediaSettings } from "../media/meta-store";
 import { listMediaMeta } from "../media/service";
 import type { ExerciseMediaMeta, PoseMeta } from "../media/types";
@@ -147,12 +155,12 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     mediaState.poseJob = job;
     void (async () => {
       if (job?.phase === "ready") {
-        if (job.pendingPose && mediaState.draft.display?.id === job.mediaId) {
-          applyPendingPoseFromJob(mediaState, job.mediaId, job.pendingPose);
-        } else if (job.pendingPose && findRoutine(job.exerciseId)) {
+        if (job.pendingPose && findRoutine(job.exerciseId)) {
           routineLibraryPoseMeta = job.pendingPose;
           mediaState.unfinishedAnim = false;
           await clearUnfinishedFlag(job.exerciseId);
+        } else if (job.pendingPose && mediaState.draft.display?.id === job.mediaId) {
+          applyPendingPoseFromJob(mediaState, job.mediaId, job.pendingPose);
         } else {
           const meta = await getExerciseMedia(job.exerciseId);
           if (meta && mediaState.draft.display?.id === meta.id) {
@@ -273,7 +281,61 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       manifestLabel: mediaState.manifestLabel,
       unfinished: routineUnfinishedAnim,
       formAnimView: libraryRoutineAnimView,
+      poseRemovedDraft: mediaState.poseRemoveDraft,
     });
+  }
+
+  function activeLibraryRoutineAnimContext(): boolean {
+    const routine = activeLibraryRoutine();
+    return libraryRoutineAnimContextActive({
+      view,
+      routineVideo: routine?.video,
+      libraryVideoDurationS,
+      hasUserClip: mediaState.draft.display?.kind === "clip",
+    });
+  }
+
+  async function clearActiveRoutineLibraryPose(): Promise<void> {
+    const routine = activeLibraryRoutine();
+    if (!routine) {
+      return;
+    }
+    await clearRoutineLibraryPose(routine.id);
+    routineLibraryPoseMeta = undefined;
+    libraryRoutineAnimView = "anim";
+    mediaState.poseRemoveDraft = false;
+    routineUnfinishedAnim = false;
+    render();
+    afterShellRender();
+  }
+
+  function startPoseForCurrentContext(): void {
+    const routine = activeLibraryRoutine();
+    const target = resolvePoseStartTarget({
+      view,
+      display: mediaState.draft.display,
+      routineVideo: routine?.video,
+      routineId: routine?.id,
+      libraryVideoDurationS,
+    });
+    if (target.kind === "exercise-clip") {
+      void startPoseJob(
+        { poseModelBaseUrl: poseBaseUrl },
+        target.meta,
+        mediaState.exerciseName,
+        mediaState.modelOnDevice,
+      );
+      return;
+    }
+    if (target.kind === "routine" && routine?.video) {
+      void startRoutineLibraryPoseJob(
+        { poseModelBaseUrl: poseBaseUrl },
+        target.routineId,
+        routine.video,
+        target.durationS,
+        mediaState.modelOnDevice,
+      );
+    }
   }
 
   async function mountLibraryVideoIfNeeded(): Promise<void> {
@@ -915,6 +977,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         if (value) {
           editingRoutine = findRoutine(value) ?? null;
           editingLibrary = null;
+          resetMediaFlowForRoutineNavigation(mediaState, draftExerciseId);
           view = "routine";
           if (editingRoutine) {
             void loadRoutineLibraryVideoState(editingRoutine).then(() => render());
@@ -983,10 +1046,18 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         return;
       }
       case "media-replace": {
+        if (activeLibraryRoutineAnimContext()) {
+          startPoseForCurrentContext();
+          return;
+        }
         root.querySelector<HTMLInputElement>("#media-file-input")?.click();
         return;
       }
       case "media-remove":
+        if (activeLibraryRoutineAnimContext()) {
+          void clearActiveRoutineLibraryPose();
+          return;
+        }
         mediaState.draft = markRemove(mediaState.draft);
         explicitFocusId = "media-pick-tile";
         void refreshMediaPoster(mediaState).then(() => refreshMediaAttachMarkup());
@@ -1001,29 +1072,9 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         explicitFocusId = "media-pick-tile";
         return;
       case "pose-start":
-      case "pose-retry": {
-        const meta = mediaState.draft.display;
-        if (meta?.kind === "clip") {
-          void startPoseJob(
-            { poseModelBaseUrl: poseBaseUrl },
-            meta,
-            mediaState.exerciseName,
-            mediaState.modelOnDevice,
-          );
-        } else {
-          const routine = activeLibraryRoutine();
-          if (routine?.video && libraryVideoDurationS) {
-            void startRoutineLibraryPoseJob(
-              { poseModelBaseUrl: poseBaseUrl },
-              routine.id,
-              routine.video,
-              libraryVideoDurationS,
-              mediaState.modelOnDevice,
-            );
-          }
-        }
+      case "pose-retry":
+        startPoseForCurrentContext();
         return;
-      }
       case "pose-cancel":
         void cancelPoseJob().then(() => refreshMediaAttachMarkup());
         return;
@@ -1043,6 +1094,10 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         figurePlayer?.setPaused(figurePaused);
         return;
       case "pose-remove":
+        if (activeLibraryRoutineAnimContext()) {
+          void clearActiveRoutineLibraryPose();
+          return;
+        }
         mediaState.poseRemoveDraft = true;
         refreshMediaAttachMarkup();
         return;
