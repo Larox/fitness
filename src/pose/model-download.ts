@@ -1,4 +1,5 @@
 import type { PoseModelManifest } from "./model-manifest";
+import { savePoseModelManifestCopy } from "./model-manifest";
 import { writePoseModelToCache } from "./model-cache";
 
 const STALL_MS = 30_000;
@@ -53,4 +54,5 @@ export async function downloadPoseModelFiles(
     }
   }
   await writePoseModelToCache(blobs);
+  await savePoseModelManifestCopy(baseUrl, manifest);
 }

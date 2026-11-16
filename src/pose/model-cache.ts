@@ -1,4 +1,5 @@
 import type { PoseModelManifest } from "./model-manifest";
+import { POSE_MANIFEST_CACHE_NAME } from "./model-manifest";
 
 export const POSE_CACHE_NAME = "fitness-pose-v1";
 
@@ -25,6 +26,7 @@ export async function isPoseModelCached(
 export async function clearPoseModelCache(): Promise<void> {
   if (typeof caches === "undefined") return;
   await caches.delete(POSE_CACHE_NAME);
+  await caches.delete(POSE_MANIFEST_CACHE_NAME);
 }
 
 export async function poseModelCachedBytes(): Promise<number> {
