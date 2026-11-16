@@ -24,6 +24,21 @@ describe("exercise form validation", () => {
     expect(dup?.imported).toBe(true);
   });
 
+  it("does not suggest editing a library duplicate", () => {
+    const existing = library.exercises[0]!;
+    const draft = emptyExerciseDraft();
+    draft.name = existing.name;
+    const issues = validateExerciseForm({
+      draft,
+      conditions,
+      libraryExercises: library.exercises,
+      userNames: [],
+      validateNow: true,
+    });
+    const dup = issues.find((i) => i.field === "duplicate");
+    expect(dup?.message).not.toMatch(/edit that one/i);
+  });
+
   it("returns validation issues after the first save attempt", () => {
     const draft = emptyExerciseDraft();
     draft.name = "";

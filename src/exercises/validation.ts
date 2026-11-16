@@ -65,9 +65,12 @@ export function validateExerciseForm(options: ValidateFormOptions): ValidationIs
       options.editingId,
     );
     if (dup) {
+      const message = dup.imported
+        ? `You already have “${dup.name}”. Pick another name.`
+        : `You already have “${dup.name}”. Pick another name, or edit that one.`;
       issues.push({
         field: "duplicate",
-        message: `You already have “${dup.name}”. Pick another name, or edit that one.`,
+        message,
         duplicateExerciseId: dup.id,
         duplicateName: dup.name,
       });

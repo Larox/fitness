@@ -10,9 +10,13 @@ async function fetchJson(path: string): Promise<unknown> {
   return response.json();
 }
 
+export type FetchLibraryResult =
+  | { ok: true; result: LibraryImportResult }
+  | { ok: false; errors: string[] };
+
 export async function fetchImportedLibrary(
   config: AppConfig,
-): Promise<LibraryImportResult | { errors: string[] }> {
+): Promise<FetchLibraryResult> {
   try {
     const snapshot = (await fetchJson(config.libraryPath)) as Parameters<
       typeof importLibrary
@@ -23,11 +27,11 @@ export async function fetchImportedLibrary(
     }
     const result = importLibrary(snapshot, { conditions: config.conditions }, overlay);
     if (result.errors.length > 0) {
-      return { errors: result.errors };
+      return { ok: false, errors: result.errors };
     }
-    return result;
+    return { ok: true, result };
   } catch (e) {
     const message = e instanceof Error ? e.message : "Library import failed";
-    return { errors: [message] };
+    return { ok: false, errors: [message] };
   }
 }

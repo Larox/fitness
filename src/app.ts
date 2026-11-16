@@ -2,7 +2,6 @@ import "./exercises/exercise.css";
 import { fetchAppConfig } from "./config/fetch-config";
 import { mountExerciseFlow } from "./exercises/exercise-screen";
 import { fetchImportedLibrary } from "./library/fetch-library";
-import type { LibraryImportResult } from "./library/types";
 import { mergePersistedState } from "./setup/merge";
 import { renderConfigError, mountSetupScreen } from "./setup/setup-screen";
 import { createLocalStorageAdapter } from "./setup/storage";
@@ -15,11 +14,11 @@ export async function bootApp(root: HTMLElement): Promise<void> {
   }
   const config = loaded.config;
   const libraryResult = await fetchImportedLibrary(config);
-  if ("errors" in libraryResult) {
+  if (!libraryResult.ok) {
     renderConfigError(root, libraryResult.errors);
     return;
   }
-  const library = libraryResult as LibraryImportResult;
+  const library = libraryResult.result;
 
   const storage = createLocalStorageAdapter();
   let setupMount: ReturnType<typeof mountSetupScreen> | null = null;

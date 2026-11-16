@@ -6,6 +6,36 @@ export interface HurtRestoreUndo {
   previous: HurtExclusion;
 }
 
+export interface HurtListDisplayRow {
+  exerciseId: string;
+  markedAt: string;
+  from: string;
+  showUndoSuccess: boolean;
+}
+
+/** Rows for the hurt list UI: active exclusions plus a pending restore slot. */
+export function buildHurtListDisplayRows(
+  exclusions: readonly HurtExclusion[],
+  pending: HurtRestoreUndo | undefined,
+): HurtListDisplayRow[] {
+  const rows: HurtListDisplayRow[] = exclusions.map((row) => ({
+    exerciseId: row.exerciseId,
+    markedAt: row.markedAt,
+    from: row.from,
+    showUndoSuccess: false,
+  }));
+  if (pending && !exclusions.some((row) => row.exerciseId === pending.exerciseId)) {
+    rows.push({
+      exerciseId: pending.exerciseId,
+      markedAt: pending.previous.markedAt,
+      from: pending.previous.from,
+      showUndoSuccess: true,
+    });
+  }
+  rows.sort((a, b) => a.markedAt.localeCompare(b.markedAt));
+  return rows;
+}
+
 export function restoreHurtExercise(
   exclusions: readonly HurtExclusion[],
   exerciseId: string,

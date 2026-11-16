@@ -1,3 +1,4 @@
+import type { HurtRestoreUndo } from "../exercises/hurt";
 import type { DeletedExerciseRecord, HurtExclusion, UserExercise } from "../exercises/types";
 
 /** User training preferences persisted on device. */
@@ -21,6 +22,8 @@ export interface PersistedAppState {
   setupComplete: boolean;
   userExercises?: UserExercise[];
   hurtExclusions?: HurtExclusion[];
+  /** Restored exclusion awaiting undo or navigation away to commit. */
+  pendingHurtRestore?: HurtRestoreUndo;
   deletedExerciseHistory?: DeletedExerciseRecord[];
   /** Sessions still scheduled in the current plan week (for re-filter and restore semantics). */
   weekSessionsRemaining?: WeekSessionCandidate[];

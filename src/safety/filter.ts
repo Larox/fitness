@@ -204,6 +204,20 @@ export function filterExercisesForScheduling(
   const dropped: DroppedExercise[] = [];
 
   for (const candidate of candidates) {
+    if (
+      candidate.userUnsetConditionIds !== undefined &&
+      candidate.userUnsetConditionIds.length > 0
+    ) {
+      dropped.push({
+        sourceExerciseId: candidate.id,
+        reasons: [
+          "Not scheduled: at least one condition risk is not set (treated as high).",
+        ],
+        conditionRisks: { ...candidate.conditionRisks },
+      });
+      continue;
+    }
+
     if (context.excludedExerciseIds.has(candidate.id)) {
       dropped.push({
         sourceExerciseId: candidate.id,

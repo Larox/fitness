@@ -2,6 +2,7 @@ import type { AppConfig } from "../config/types";
 import {
   sanitizeDeletedHistory,
   sanitizeHurtExclusions,
+  sanitizePendingHurtRestore,
   sanitizeUserExercises,
   sanitizeWeekSessions,
 } from "../exercises/persisted";
@@ -133,6 +134,7 @@ export function mergePersistedState(
     settings: sanitizeTrainingSettings(stored.settings, config),
     userExercises: sanitizeUserExercises(stored.userExercises),
     hurtExclusions: sanitizeHurtExclusions(stored.hurtExclusions),
+    pendingHurtRestore: sanitizePendingHurtRestore(stored.pendingHurtRestore),
     deletedExerciseHistory: sanitizeDeletedHistory(stored.deletedExerciseHistory),
     weekSessionsRemaining: sanitizeWeekSessions(stored.weekSessionsRemaining),
   };

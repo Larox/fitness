@@ -14,10 +14,10 @@ import {
 import { captureFocus, restoreFocus } from "./focus";
 import { formatDosePreview, clampHoldSeconds, clampReps, clampSets } from "./dose";
 import {
+  buildHurtListDisplayRows,
   formatMarkedDate,
   restoreHurtExercise,
   undoHurtRestore,
-  type HurtRestoreUndo,
 } from "./hurt";
 import { deleteUserExercise } from "./delete";
 import { unsetRiskCount, isRiskExplicitlySet } from "./risk";
@@ -63,8 +63,6 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   let savedDraftJson = JSON.stringify(draft);
   let attemptedSave = false;
   let statusMessage: string | null = null;
-  let pendingUndo: HurtRestoreUndo | null = null;
-  let pendingUndoExerciseId: string | null = null;
   let explicitFocusId: string | null = null;
 
   const bar = document.createElement("div");
@@ -86,10 +84,16 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   }
 
   function commitPendingUndo(): void {
-    if (pendingUndo) {
-      pendingUndo = null;
-      pendingUndoExerciseId = null;
+    if (persisted.pendingHurtRestore) {
+      persisted = { ...persisted, pendingHurtRestore: undefined };
+      persist(persisted);
     }
+  }
+
+  function libraryDoseLabel(exercise: NormalizedExercise): string {
+    const sets = exercise.sets ?? 1;
+    const reps = exercise.reps ?? "—";
+    return `${sets} × ${reps}`;
   }
 
   function renderRiskSegment(
@@ -239,39 +243,48 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         return `<button type="button" class="nrow" data-act="open-edit" data-v="${row.id}"><span class="txt"><b>${escapeHtml(row.name)}</b>${isNew ? '<span class="tag tag-new">New</span>' : ""}${tag}<br/><span class="preview">${escapeHtml(formatDosePreview(row.dose))}</span></span>${ICONS.chev}</button>`;
       })
       .join("");
+    const importedRows = libraryExercises
+      .map(
+        (exercise) =>
+          `<div class="nrow" aria-disabled="true"><span class="txt"><b>${escapeHtml(exercise.name)}</b><br/><span class="preview">${escapeHtml(libraryDoseLabel(exercise))}</span><span class="ds">Imported · read-only</span></span></div>`,
+      )
+      .join("");
     return `<button type="button" class="back" data-act="back-settings">‹ Settings</button>
       <h1 class="title" id="my-title" tabindex="-1">My exercises</h1>
       <p class="sub">Exercises you added. The coach plans only from your library.</p>
       ${statusMessage ? `<p class="status-toast" role="status">${escapeHtml(statusMessage)}</p>` : ""}
       <div class="sect"><h2>Yours · ${rows.length}</h2></div>
       <div class="group">${list || `<div class="empty">${ICONS.info}<p>No exercises yet.</p></div>`}</div>
+      <div class="sect"><h2>Imported · read-only</h2></div>
+      <div class="group">${importedRows || `<div class="empty">${ICONS.info}<p>No imported exercises.</p></div>`}</div>
       <div class="sect"><h2>Library</h2></div>
       <div class="group"><button type="button" class="nrow" data-act="open-hurt"><span class="txt"><b>Marked as hurt</b><span class="ds">${hurtCount} kept out of plans</span></span>${ICONS.chev}</button></div>`;
   }
 
   function renderHurtList(): string {
-    const rows = persisted.hurtExclusions ?? [];
-    const body = rows
+    const exclusions = persisted.hurtExclusions ?? [];
+    const displayRows = buildHurtListDisplayRows(exclusions, persisted.pendingHurtRestore);
+    const body = displayRows
       .map((row) => {
-        const undo =
-          pendingUndoExerciseId === row.exerciseId && pendingUndo
-            ? `<div class="undo-row" role="status"><b>${escapeHtml(exerciseName(row.exerciseId))} restored</b>. Back in future plans. Risk levels unchanged.
-                <button type="button" data-act="undo-restore" data-v="${row.exerciseId}">Undo</button></div>`
-            : "";
-        return `${undo}<div class="restore-row"><div><b>${escapeHtml(exerciseName(row.exerciseId))}</b>
+        const name = exerciseName(row.exerciseId);
+        if (row.showUndoSuccess) {
+          return `<div class="undo-row" role="status"><b>${escapeHtml(name)} restored</b>. Back in future plans. Risk levels unchanged.
+              <button type="button" id="undo-restore-${row.exerciseId}" data-act="undo-restore" data-v="${row.exerciseId}">Undo</button></div>`;
+        }
+        return `<div class="restore-row"><div><b>${escapeHtml(name)}</b>
           <p class="sub">Marked ${escapeHtml(formatMarkedDate(row.markedAt))} · from ${escapeHtml(row.from)}</p></div>
-          <button type="button" class="restore-pill" data-act="restore" data-v="${row.exerciseId}" aria-label="Restore ${escapeHtml(exerciseName(row.exerciseId))}">Restore</button></div>`;
+          <button type="button" class="restore-pill" id="restore-pill-${row.exerciseId}" data-act="restore" data-v="${row.exerciseId}" aria-label="Restore ${escapeHtml(name)}">Restore</button></div>`;
       })
       .join("");
     const empty =
-      rows.length === 0
+      displayRows.length === 0
         ? `<div class="empty">${ICONS.info}<p><b>Nothing marked as hurt.</b> When you tap “This hurt” on an exercise, it shows up here and stays out of your plans until you restore it.</p></div>`
         : "";
     return `<button type="button" class="back" data-act="back-settings">‹ Settings</button>
       <h1 class="title" tabindex="-1">Marked as hurt</h1>
       <p class="sub">These stay out of your plans until you restore them.</p>
-      <div class="sect"><h2>Kept out of plans · ${rows.length}</h2></div>
-      <div class="group">${rows.length ? body : empty}</div>
+      <div class="sect"><h2>Kept out of plans · ${exclusions.length}</h2></div>
+      <div class="group">${displayRows.length ? body : empty}</div>
       <p class="hint">Restoring only lifts the “hurt” flag. Its risk levels stay as they were.</p>`;
   }
 
@@ -504,21 +517,26 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         if (!value) break;
         const result = restoreHurtExercise(persisted.hurtExclusions ?? [], value);
         if (result.restored) {
-          pendingUndo = { exerciseId: value, previous: result.restored };
-          pendingUndoExerciseId = value;
-          explicitFocusId = null;
-          persisted = { ...persisted, hurtExclusions: result.exclusions };
+          persisted = {
+            ...persisted,
+            hurtExclusions: result.exclusions,
+            pendingHurtRestore: { exerciseId: value, previous: result.restored },
+          };
+          persist(persisted);
+          explicitFocusId = `undo-restore-${value}`;
         }
         break;
       }
       case "undo-restore": {
-        if (pendingUndo && value === pendingUndo.exerciseId) {
+        const pending = persisted.pendingHurtRestore;
+        if (pending && value === pending.exerciseId) {
           persisted = {
             ...persisted,
-            hurtExclusions: undoHurtRestore(persisted.hurtExclusions ?? [], pendingUndo),
+            hurtExclusions: undoHurtRestore(persisted.hurtExclusions ?? [], pending),
+            pendingHurtRestore: undefined,
           };
-          pendingUndo = null;
-          pendingUndoExerciseId = null;
+          persist(persisted);
+          explicitFocusId = `restore-pill-${value}`;
         }
         break;
       }

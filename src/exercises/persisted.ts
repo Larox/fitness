@@ -1,3 +1,4 @@
+import type { HurtRestoreUndo } from "./hurt";
 import type { DoseMode, UserExercise, HurtExclusion, DeletedExerciseRecord } from "./types";
 import type { WeekSessionCandidate } from "../setup/types";
 import type { RiskLevel } from "../library/types";
@@ -140,6 +141,20 @@ export function sanitizeDeletedHistory(raw: unknown): DeletedExerciseRecord[] {
     });
   }
   return rows;
+}
+
+export function sanitizePendingHurtRestore(raw: unknown): HurtRestoreUndo | undefined {
+  if (!isPlainObject(raw)) {
+    return undefined;
+  }
+  if (typeof raw.exerciseId !== "string") {
+    return undefined;
+  }
+  const previous = sanitizeHurtExclusions([raw.previous])[0];
+  if (!previous) {
+    return undefined;
+  }
+  return { exerciseId: raw.exerciseId, previous };
 }
 
 export function sanitizeWeekSessions(raw: unknown): WeekSessionCandidate[] {

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { loadExampleConditions } from "./helpers";
 import { effectiveRiskLevel, userExerciseNeverPlanned } from "../src/exercises/risk";
-import { scheduleUserExercise, isUserExerciseSchedulable } from "../src/exercises/planning";
+import { scheduleUserExercise } from "../src/exercises/planning";
+import { filterExercisesForScheduling } from "../src/safety/filter";
+import { userExerciseToNormalized } from "../src/exercises/to-normalized";
 import { activeConditionIds } from "../src/setup/defaults";
 import { defaultTrainingSettings } from "../src/setup/defaults";
 import type { AppConfig } from "../src/config/types";
@@ -48,7 +50,6 @@ describe("unset user condition risk", () => {
   it("is never planned while any risk stays unset", () => {
     const ex = sampleUserExercise();
     expect(userExerciseNeverPlanned(ex, config.conditions)).toBe(true);
-    expect(isUserExerciseSchedulable(ex, config.conditions)).toBe(false);
     const settings = defaultTrainingSettings(config);
     const context = {
       conditions: config.conditions,
@@ -59,12 +60,25 @@ describe("unset user condition risk", () => {
     const result = scheduleUserExercise(ex, context, config.conditions);
     expect(result.scheduled).toHaveLength(0);
     expect(result.dropped).toHaveLength(1);
+    const viaFilter = filterExercisesForScheduling(
+      [userExerciseToNormalized(ex, config.conditions)],
+      { ...context, exercisesById: new Map() },
+    );
+    expect(viaFilter.scheduled).toHaveLength(0);
   });
 
   it("can be planned once every condition has an explicit level", () => {
     const ex = sampleUserExercise({
       riskChosen: Object.fromEntries(config.conditions.map((c) => [c.id, "low" as const])),
     });
-    expect(isUserExerciseSchedulable(ex, config.conditions)).toBe(true);
+    const normalized = userExerciseToNormalized(ex, config.conditions);
+    const settings = defaultTrainingSettings(config);
+    const result = filterExercisesForScheduling([normalized], {
+      conditions: config.conditions,
+      activeConditionIds: activeConditionIds(settings),
+      excludedExerciseIds: new Set(),
+      exercisesById: new Map([[normalized.id, normalized]]),
+    });
+    expect(result.scheduled).toHaveLength(1);
   });
 });
