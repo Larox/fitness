@@ -1,0 +1,87 @@
+/* Fitness (Larox/fitness) design tokens. v1, Pixel, 2026-11-15.
+   Theme: LIGHT. He reads it at arm's length under bright gym lights and in daylight at
+   home, and a light warm base lets the amber caution read calm instead of alarming.
+   Contrast (WCAG 2.x). AA = 4.5:1 body text, 3:1 large text and UI/graphics.
+     --text        on --surface 16.7  | on --bg 15.0
+     --muted       on --surface 6.3   | on --bg 5.6  | on --surface-2 5.2
+     --primary     on --surface 9.8   | on --bg 8.8  | on --primary-tint 8.4
+     --on-primary  on --primary 9.8   | on --primary-pressed 12.7
+     --success     on --surface 6.5   | on --success-tint 5.6
+     --success-fill vs --surface 4.3 (graphic, white check on it 4.3)
+     --caution-text on --caution-tint 7.3 | --caution-bar on --caution-tint 4.6 (graphic)
+     --danger      on --surface 6.5   | on --danger-tint 5.7
+     --info-text   on --info-tint 8.0
+     --border-strong on --surface 3.2 (unchecked toggle ring, chip outline: UI 3:1)
+     --disabled-text on --disabled-bg 4.6 (exempt, kept legible anyway)
+     --focus       on --bg 4.5 / --surface 5.0
+   --border and --track are decorative only (no meaning carried by them alone). */
+:root {
+  color-scheme: light;
+
+  /* Color roles */
+  --bg: #f4f3ef;              /* app background, warm off-white */
+  --surface: #ffffff;         /* cards, sticky bar */
+  --surface-2: #eceae4;       /* sunken: chip rows, pressed card */
+  --done-bg: #f7f7f4;         /* done card fill */
+  --border: #e3e0d8;          /* hairlines (decorative) */
+  --border-strong: #8a918c;   /* unchecked toggle ring, chip outline */
+  --track: #d9d6ce;           /* progress track (decorative) */
+  --text: #1b1f1d;
+  --muted: #5b625e;
+  --primary: #24456b;         /* calm navy: main button, selected chip, links */
+  --primary-pressed: #1a3452;
+  --primary-tint: #e8eef5;
+  --on-primary: #ffffff;
+  --success: #1d6b45;         /* success text */
+  --success-fill: #2e8a5c;    /* done check fill */
+  --success-tint: #e3f2e8;
+  --caution-text: #7a4300;    /* amber: moderate-risk caution */
+  --caution-bar: #a35f00;     /* caution left bar + icon */
+  --caution-tint: #fff3dc;
+  --danger: #b3261e;          /* "this hurt", errors */
+  --danger-tint: #fdecea;
+  --info-text: #2c4a6b;       /* swap / drop note */
+  --info-tint: #e9f0f7;
+  --disabled-bg: #e4e2dc;
+  --disabled-text: #5f6561;
+  --focus: #2b6cd1;
+  --scrim: #1b1f1d66;
+
+  /* Type: system stack, native feel */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
+  --fs-12: 0.75rem;   /* 12px  overline, tag */
+  --fs-13: 0.8125rem; /* 13px  caption, helper */
+  --fs-15: 0.9375rem; /* 15px  body, cues, caution */
+  --fs-17: 1.0625rem; /* 17px  exercise name, button label */
+  --fs-20: 1.25rem;   /* 20px  dose (sets x reps) emphasis */
+  --fs-28: 1.75rem;   /* 28px  screen title */
+  --lh-tight: 1.2; --lh-body: 1.45;
+  --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;
+  --tracking-overline: 0.06em;
+
+  /* Spacing: 4/8 scale */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px;
+  --gutter: 16px;             /* screen inline padding (all widths 360-430) */
+  --tap: 44px;                /* minimum touch target */
+  --tap-lg: 52px;             /* primary button height */
+
+  /* Radii */
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-pill: 999px;
+
+  /* Shadows */
+  --shadow-card: 0 1px 2px #1b1f1d0f, 0 1px 1px #1b1f1d0a;
+  --shadow-raised: 0 4px 16px #1b1f1d14;
+  --shadow-bar: 0 -1px 0 #1b1f1d14, 0 -8px 24px #1b1f1d0f;
+
+  /* Motion */
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --dur-fast: 120ms;          /* press, toggle */
+  --dur-base: 200ms;          /* expand/collapse, chip select */
+  --dur-slow: 320ms;          /* card done settle, bar state change */
+  --press-scale: .97;
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--focus);
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; --press-scale: 1; }
+}

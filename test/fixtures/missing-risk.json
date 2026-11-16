@@ -1,0 +1,16 @@
+[
+  {
+    "id": "fixture_risk",
+    "title": "Fixture: missing exercise risk",
+    "category": "test",
+    "duration_min": 5,
+    "exercises": [
+      {
+        "name": "No risk fields exercise",
+        "reps": "10"
+      }
+    ],
+    "concern_a_risk": "low",
+    "knee_risk": "low"
+  }
+]

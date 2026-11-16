@@ -1,0 +1,19 @@
+[
+  {
+    "id": "fixture_norm",
+    "title": "Fixture: normalization",
+    "category": "feet / ankles, mobility",
+    "duration_min": "10-15",
+    "exercises": [
+      {
+        "name": "Normalize me",
+        "reps": 1,
+        "cues": ["line one", "line two"],
+        "concern_a_risk": "low",
+        "knee_risk": "moderate"
+      }
+    ],
+    "concern_a_risk": "low",
+    "knee_risk": "low"
+  }
+]
