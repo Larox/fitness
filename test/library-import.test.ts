@@ -1,11 +1,14 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { loadAppConfig } from "../src/config/load";
 import { deriveExerciseId } from "../src/library/exercise-id";
 import { importLibrary } from "../src/library/import";
 import type { ExerciseOverlayFile, SnapshotRoutine } from "../src/library/types";
+import { loadExampleConditions } from "./helpers";
 
 const root = resolve(import.meta.dirname, "..");
+const conditions = loadExampleConditions();
 
 function loadJson<T>(relativePath: string): T {
   const text = readFileSync(resolve(root, relativePath), "utf8");
@@ -13,29 +16,32 @@ function loadJson<T>(relativePath: string): T {
 }
 
 describe("importLibrary", () => {
-  it("imports the real snapshot with routines and stable exercise IDs", () => {
-    const snapshot = loadJson<SnapshotRoutine[]>("data/snapshot/index.json");
-    const result = importLibrary(snapshot, {});
+  it("imports the sample library with routines and stable exercise IDs", () => {
+    const config = loadAppConfig("config.example.json");
+    const snapshot = loadJson<SnapshotRoutine[]>(config.libraryPath);
+    const result = importLibrary(snapshot, { conditions }, {});
 
     expect(result.errors).toEqual([]);
     expect(result.skipped).toEqual([]);
-    expect(result.routines.length).toBe(20);
-    expect(result.exercises.length).toBe(74);
+    expect(result.routines.length).toBe(2);
+    expect(result.exercises.length).toBe(4);
 
-    const legsUp = result.exercises.find((e) => e.name === "Legs up the wall");
-    expect(legsUp).toBeDefined();
-    expect(legsUp!.id).toBe(deriveExerciseId("DfiTJijMlPQ", "Legs up the wall"));
-    expect(legsUp!.id).toMatch(/^ex_[a-f0-9]{16}$/);
+    const march = result.exercises.find((e) => e.name === "Gentle march");
+    expect(march).toBeDefined();
+    expect(march!.id).toBe(deriveExerciseId("sample_routine_one", "Gentle march"));
+    expect(march!.id).toMatch(/^ex_[a-f0-9]{16}$/);
+    expect(march!.conditionRisks.concern_a).toBe("low");
+    expect(march!.conditionRisks.concern_b).toBe("low");
   });
 
   it("treats missing exercise risk fields as high (fail closed)", () => {
     const snapshot = loadJson<SnapshotRoutine[]>("test/fixtures/missing-risk.json");
-    const result = importLibrary(snapshot, {});
+    const result = importLibrary(snapshot, { conditions }, {});
 
     expect(result.errors).toEqual([]);
     expect(result.exercises).toHaveLength(1);
-    expect(result.exercises[0]!.herniaRisk).toBe("high");
-    expect(result.exercises[0]!.kneeRisk).toBe("high");
+    expect(result.exercises[0]!.conditionRisks.concern_a).toBe("high");
+    expect(result.exercises[0]!.conditionRisks.concern_b).toBe("high");
   });
 
   it("rejects overlay swap_to when the target exercise id is unknown", () => {
@@ -45,7 +51,7 @@ describe("importLibrary", () => {
       [exerciseId]: { swap_to: "ex_does_not_exist0000" },
     };
 
-    const result = importLibrary(snapshot, overlay);
+    const result = importLibrary(snapshot, { conditions }, overlay);
 
     expect(result.routines).toEqual([]);
     expect(result.exercises).toEqual([]);
@@ -55,7 +61,7 @@ describe("importLibrary", () => {
 
   it("skips routines with no exercises and records a reason", () => {
     const snapshot = loadJson<SnapshotRoutine[]>("test/fixtures/empty-routine.json");
-    const result = importLibrary(snapshot, {});
+    const result = importLibrary(snapshot, { conditions }, {});
 
     expect(result.routines).toEqual([]);
     expect(result.exercises).toEqual([]);
@@ -70,7 +76,7 @@ describe("importLibrary", () => {
 
   it("normalizes category strings and duration ranges", () => {
     const snapshot = loadJson<SnapshotRoutine[]>("test/fixtures/normalize.json");
-    const result = importLibrary(snapshot, {});
+    const result = importLibrary(snapshot, { conditions }, {});
 
     expect(result.errors).toEqual([]);
     expect(result.routines).toHaveLength(1);
@@ -85,21 +91,19 @@ describe("importLibrary", () => {
 
     const exercise = result.exercises[0]!;
     expect(exercise.cues).toEqual(["line one", "line two"]);
-    expect(exercise.kneeRisk).toBe("moderate");
+    expect(exercise.conditionRisks.concern_b).toBe("moderate");
   });
 
   it("accepts overlay swap_to when the target id exists in the library", () => {
-    const real = loadJson<SnapshotRoutine[]>("data/snapshot/index.json");
-    const targetId = deriveExerciseId(
-      "DeOwTlTyqlK",
-      "Couch stretch / half-kneeling hip flexor stretch",
-    );
-    const sourceId = deriveExerciseId("DeOwTlTyqlK", "Alternating V-up");
+    const config = loadAppConfig("config.example.json");
+    const snapshot = loadJson<SnapshotRoutine[]>(config.libraryPath);
+    const targetId = deriveExerciseId("sample_routine_two", "Swap target stretch");
+    const sourceId = deriveExerciseId("sample_routine_two", "Bird hold");
     const overlay: ExerciseOverlayFile = {
       [sourceId]: { swap_to: targetId, max_reps: 8, location: "home" },
     };
 
-    const result = importLibrary(real, overlay);
+    const result = importLibrary(snapshot, { conditions }, overlay);
 
     expect(result.errors).toEqual([]);
     const swapped = result.exercises.find((e) => e.id === sourceId);

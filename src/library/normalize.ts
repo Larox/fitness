@@ -1,3 +1,4 @@
+import type { ConditionConfig } from "../config/types";
 import type { DurationMin, RiskLevel, SnapshotRoutine } from "./types";
 
 const RISK_LEVELS: readonly RiskLevel[] = ["low", "moderate", "high"];
@@ -60,22 +61,36 @@ export function normalizeCues(cues: string | string[] | null | undefined): strin
   return s ? [s] : [];
 }
 
-export function aggregateRoutineRisk(
+const maxRisk = (levels: RiskLevel[]): RiskLevel => {
+  if (levels.includes("high")) return "high";
+  if (levels.includes("moderate")) return "moderate";
+  return "low";
+};
+
+export function aggregateRoutineRisks(
+  conditions: ConditionConfig[],
+  exerciseRisksByCondition: Record<string, RiskLevel[]>,
+  readRoutineRisk: (libraryField: string) => RiskLevel | undefined,
+): Record<string, RiskLevel> {
+  const result: Record<string, RiskLevel> = {};
+
+  for (const condition of conditions) {
+    const routineLevel = normalizeRisk(readRoutineRisk(condition.libraryField));
+    const exerciseLevels = exerciseRisksByCondition[condition.id] ?? [];
+    result[condition.id] = maxRisk([routineLevel, ...exerciseLevels]);
+  }
+
+  return result;
+}
+
+/** Read a routine-level risk field when present on the snapshot object. */
+export function readRoutineLibraryRisk(
   routine: SnapshotRoutine,
-  exerciseHernia: RiskLevel[],
-  exerciseKnee: RiskLevel[],
-): { herniaRisk: RiskLevel; kneeRisk: RiskLevel } {
-  const routineHernia = normalizeRisk(routine.hernia_risk);
-  const routineKnee = normalizeRisk(routine.knee_risk);
-
-  const maxRisk = (levels: RiskLevel[]): RiskLevel => {
-    if (levels.includes("high")) return "high";
-    if (levels.includes("moderate")) return "moderate";
-    return "low";
-  };
-
-  return {
-    herniaRisk: maxRisk([routineHernia, ...exerciseHernia]),
-    kneeRisk: maxRisk([routineKnee, ...exerciseKnee]),
-  };
+  libraryField: string,
+): RiskLevel | undefined {
+  const value = (routine as unknown as Record<string, unknown>)[libraryField];
+  if (value === "low" || value === "moderate" || value === "high") {
+    return value;
+  }
+  return undefined;
 }

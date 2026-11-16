@@ -9,11 +9,11 @@
         "name": "Normalize me",
         "reps": 1,
         "cues": ["line one", "line two"],
-        "hernia_risk": "low",
-        "knee_risk": "moderate"
+        "concern_a_risk": "low",
+        "concern_b_risk": "moderate"
       }
     ],
-    "hernia_risk": "low",
-    "knee_risk": "low"
+    "concern_a_risk": "low",
+    "concern_b_risk": "low"
   }
 ]
