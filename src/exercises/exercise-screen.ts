@@ -455,6 +455,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   }
 
   async function openExerciseMedia(exerciseId: string): Promise<void> {
+    mediaSaveError = null;
     await hydrateMediaDraft(mediaState, exerciseId);
     render();
   }
@@ -588,12 +589,14 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
 
     switch (act) {
       case "back-settings":
+        mediaSaveError = null;
         commitPendingUndo();
         void commitPendingMediaListRemove(mediaState);
         persist(persisted);
         onBackToSettings();
         return;
       case "back-my":
+        mediaSaveError = null;
         void discardUnsavedMedia(mediaState).then(() => {
           editingLibrary = null;
         });
@@ -602,6 +605,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         void refreshMyThumbs();
         break;
       case "open-hurt":
+        mediaSaveError = null;
         view = "hurt";
         break;
       case "open-library":
@@ -613,6 +617,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         }
         break;
       case "open-media-list":
+        mediaSaveError = null;
         view = "media-list";
         void (async () => {
           mediaListRows = await listMediaMeta();
@@ -866,6 +871,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
           };
           persist(persisted);
           editing = null;
+          mediaSaveError = null;
           view = "my";
         }
         break;
