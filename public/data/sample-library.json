@@ -1,0 +1,59 @@
+[
+  {
+    "id": "sample_routine_one",
+    "source": "sample",
+    "title": "Morning mobility block",
+    "category": "mobility / warm-up",
+    "duration_min": "8-10",
+    "exercises": [
+      {
+        "name": "Gentle march",
+        "reps": "20",
+        "cues": "Stand tall, soft steps, arms relaxed",
+        "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Wall lean stretch",
+        "reps": "30 s each side",
+        "cues": "Heel down, lean toward the wall",
+        "concern_a_risk": "low",
+        "concern_b_risk": "moderate"
+      }
+    ],
+    "concern_a_risk": "low",
+    "concern_b_risk": "low"
+  },
+  {
+    "id": "sample_routine_two",
+    "source": "sample",
+    "title": "Core stability intro",
+    "category": ["stability", "intro"],
+    "duration_min": 5,
+    "notes": "If bounce is too much, use Swap target stretch instead.",
+    "exercises": [
+      {
+        "name": "Bird hold",
+        "sets": 2,
+        "reps": "6 per side",
+        "caution": "Stop if form breaks down",
+        "concern_a_risk": "moderate",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Swap target stretch",
+        "reps": "45 s",
+        "concern_a_risk": "low",
+        "concern_b_risk": "low"
+      },
+      {
+        "name": "Aggressive bounce",
+        "reps": "12",
+        "concern_a_risk": "high",
+        "concern_b_risk": "low"
+      }
+    ],
+    "concern_a_risk": "moderate",
+    "concern_b_risk": "low"
+  }
+]
