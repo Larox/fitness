@@ -5,3 +5,6 @@ dist
 *.tsbuildinfo
 config.json
 data/private/
+public/models/pose_landmarker_lite.task
+public/models/manifest.json
+public/models/wasm/

@@ -93,6 +93,10 @@
   font-weight: 600;
   color: var(--primary);
   background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .exercise-shell .media-actions button.danger {
@@ -333,4 +337,158 @@
   color: #ffffffc7;
   font-size: 13px;
   padding: 16px;
+}
+
+.cardfoot .hurt {
+  white-space: nowrap;
+  flex: none;
+}
+
+.exercise-shell .anim-divider {
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+.exercise-shell .anim-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.exercise-shell .anim-offer {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.exercise-shell .anim-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary-tint);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.exercise-shell .anim-btn {
+  min-height: 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  color: var(--primary);
+  font-weight: 600;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.exercise-shell .anim-btn.full {
+  width: 100%;
+}
+
+.exercise-shell .anim-remove {
+  min-height: 44px;
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.exercise-shell .anim-progress {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+}
+
+.exercise-shell .anim-progress .media-cancel {
+  grid-column: 3;
+  grid-row: 1 / span 3;
+}
+
+.exercise-shell .media-frame.media-anim {
+  background: var(--surface);
+}
+
+.exercise-shell .media-frame.media-anim.show-canvas .pose-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.exercise-shell .media-frame.processing .media-cover {
+  filter: brightness(0.72);
+}
+
+.exercise-shell .media-frame .ovl {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  background: #1b1f1db8;
+  color: #fff;
+  text-align: center;
+}
+
+.exercise-shell .media-frame .ovl .obar {
+  width: min(240px, 80%);
+  height: 6px;
+  border-radius: 3px;
+  background: #ffffff4d;
+  overflow: hidden;
+}
+
+.exercise-shell .media-frame .ovl .obar i {
+  display: block;
+  height: 100%;
+  background: #fff;
+}
+
+.exercise-shell .media-frame .fpause {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #1b1f1dad;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+}
+
+.exercise-shell .aseg {
+  margin-bottom: 12px;
+}
+
+.exercise-shell .seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--track);
+  border-radius: 12px;
+}
+
+.exercise-shell .seg button {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.exercise-shell .seg button[aria-checked="true"] {
+  background: #fff;
+  color: var(--primary);
+}
+
+.exercise-shell .usage-legend {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 8px;
 }

@@ -1,7 +1,10 @@
 import "./media.css";
 import { formatDurationMmSs } from "./format";
 import type { ExerciseMediaMeta } from "./types";
+import { readMediaBlob } from "./file-store";
 import { readMediaFileBlob, readPosterBlob } from "./service";
+import { FigurePlayer } from "../pose/figure-player";
+import { poseJobMatches } from "../pose/pose-job-service";
 
 export type TodayMediaState = "none" | "photo" | "clip" | "playing" | "missing";
 
@@ -9,6 +12,7 @@ export interface MountMediaPreviewOptions {
   root: HTMLElement;
   exerciseName: string;
   meta: ExerciseMediaMeta | null;
+  todayView?: "anim" | "clip";
   fileMissing?: boolean;
   cuesHtml?: string;
   sourceLinkHtml?: string;
@@ -31,10 +35,13 @@ export class ExerciseMediaPreview {
   private ended = false;
   private muted = true;
   private video: HTMLVideoElement | null = null;
+  private figurePlayer: FigurePlayer | null = null;
+  private todayView: "anim" | "clip" = "anim";
   private readonly reducedMotion: boolean;
 
   constructor(private readonly options: MountMediaPreviewOptions) {
     this.reducedMotion = prefersReducedMotion();
+    this.todayView = options.todayView ?? "anim";
   }
 
   async load(): Promise<TodayMediaState> {
@@ -75,6 +82,42 @@ export class ExerciseMediaPreview {
       return;
     }
     if ((state === "clip" || state === "playing") && this.posterUrl && meta) {
+      if (meta.pose && poseJobMatches(meta.exerciseId, meta.id)) {
+        root.innerHTML = `${caution}<div class="media-frame today-media">
+          <img src="${this.posterUrl}" class="media-cover" alt="" />
+          <span class="media-duration-badge">${formatDurationMmSs(meta.durationS ?? 0)}</span>
+          <button type="button" class="media-clip-play" data-act="media-play">▶</button>
+        </div><p class="mcap" role="status"><span class="pend">Animation in progress</span></p>${cuesHtml}${sourceLinkHtml}`;
+        this.wireClip(root, meta);
+        return;
+      }
+      if (meta.pose && !meta.fileKey) {
+        /* unreachable */
+      }
+      if (meta.pose && this.todayView === "anim") {
+        const toggle = `<div class="seg aseg" role="radiogroup" aria-label="Show the animation or your clip of ${escapeAttr(exerciseName)}">
+          <button type="button" role="radio" aria-checked="true" data-act="today-aview" data-v="anim">Animation</button>
+          <button type="button" role="radio" aria-checked="false" data-act="today-aview" data-v="clip">Clip</button>
+        </div>`;
+        root.innerHTML = `${caution}${toggle}<div class="media-frame today-media media-anim show-canvas">
+          <canvas class="pose-canvas" data-role="pose-canvas" width="400" height="300"></canvas>
+          <button type="button" class="fpause" data-act="today-apause" aria-label="Pause animation">⏸</button>
+        </div>${cuesHtml}${sourceLinkHtml}`;
+        void this.mountFigure(root, meta, exerciseName);
+        root.querySelectorAll("[data-act=today-aview]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const v = (btn as HTMLElement).dataset.v;
+            if (v === "clip" || v === "anim") {
+              this.todayView = v;
+              this.figurePlayer?.destroy();
+              this.figurePlayer = null;
+              if (v === "clip") this.render("clip");
+              else this.render("clip");
+            }
+          });
+        });
+        return;
+      }
       const dur = formatDurationMmSs(meta.durationS ?? 0);
       const replay = this.ended && this.reducedMotion;
       const playLabel = replay
@@ -195,7 +238,34 @@ export class ExerciseMediaPreview {
     this.playing = false;
   }
 
+  private async mountFigure(
+    root: HTMLElement,
+    meta: ExerciseMediaMeta,
+    exerciseName: string,
+  ): Promise<void> {
+    const canvas = root.querySelector<HTMLCanvasElement>("[data-role=pose-canvas]");
+    if (!canvas || !meta.pose) return;
+    const blob = await readMediaBlob(meta.pose.key);
+    if (!blob) {
+      this.todayView = "clip";
+      this.render("clip");
+      return;
+    }
+    this.figurePlayer = new FigurePlayer({
+      canvas,
+      blob,
+      exerciseName,
+      reducedMotion: this.reducedMotion,
+    });
+    await this.figurePlayer.load();
+    this.figurePlayer.mount();
+    root.querySelector<HTMLButtonElement>("[data-act=today-apause]")?.addEventListener("click", () => {
+      this.figurePlayer?.setPaused(true);
+    });
+  }
+
   destroy(): void {
+    this.figurePlayer?.destroy();
     this.pauseClip();
     if (this.posterUrl) {
       URL.revokeObjectURL(this.posterUrl);

@@ -4,12 +4,14 @@ import type { NormalizedExercise } from "../library/types";
 import { escapeHtml, ICONS } from "../setup/icons";
 import { createUserExerciseId, createUserRoutineId } from "./ids";
 import {
+  applyPendingPoseFromJob,
   cancelMediaImport,
   commitMediaForSave,
   commitPendingMediaListRemove,
   createMediaFlowState,
   discardUnsavedMedia,
   hydrateMediaDraft,
+  isMediaFormDirty,
   loadMyExerciseThumbs,
   markRemove,
   mediaAttachHtml,
@@ -21,7 +23,7 @@ import {
   undoRemove,
   type MediaFlowState,
 } from "./exercise-media-flow";
-import { isMediaDraftDirty } from "../media/draft";
+import { loadMediaSettings, saveMediaSettings } from "../media/meta-store";
 import { listMediaMeta } from "../media/service";
 import type { ExerciseMediaMeta } from "../media/types";
 import { formatMegabytes, formatDurationMmSs } from "../media/format";
@@ -48,6 +50,21 @@ import { unsetRiskCount, isRiskExplicitlySet } from "./risk";
 import { validateExerciseForm, type ValidationIssue } from "./validation";
 import type { ExerciseFormDraft, UserExercise } from "./types";
 import { normalizeSourceUrl } from "./url";
+import { readMediaBlob } from "../media/file-store";
+import { getExerciseMedia } from "../media/service";
+import { FigurePlayer } from "../pose/figure-player";
+import { poseBarHelper } from "../pose/attach-anim-html";
+import { formatModelTotal } from "../pose/model-manifest";
+import { clearPoseModelCache } from "../pose/model-cache";
+import {
+  cancelPoseJob,
+  loadPoseModelManifest,
+  startPoseJob,
+  subscribePoseJob,
+  resumePoseJobMarker,
+  isModelOnDevice,
+  clearUnfinishedFlag,
+} from "../pose/pose-job-service";
 
 type View = "my" | "form" | "hurt" | "library" | "media-list";
 
@@ -94,12 +111,44 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   const mediaState: MediaFlowState = createMediaFlowState(draftExerciseId);
   let mediaListRows: ExerciseMediaMeta[] = [];
   let mediaSaveError: string | null = null;
+  const poseBaseUrl = config.poseModelBaseUrl ?? "/models";
+  let figurePlayer: FigurePlayer | null = null;
+  let figurePaused = false;
+  let pendingPoseModelRemove = false;
 
   const bar = document.createElement("div");
   bar.className = "exercise-bar";
   bar.id = "exercise-bar";
   document.body.classList.add("exercise-has-bar");
   document.body.appendChild(bar);
+
+  const unsubPose = subscribePoseJob((job) => {
+    mediaState.poseJob = job;
+    void (async () => {
+      if (job?.phase === "ready") {
+        if (job.pendingPose && mediaState.draft.display?.id === job.mediaId) {
+          applyPendingPoseFromJob(mediaState, job.mediaId, job.pendingPose);
+        } else {
+          const meta = await getExerciseMedia(job.exerciseId);
+          if (meta && mediaState.draft.display?.id === meta.id) {
+            mediaState.draft.display = meta;
+            mediaState.draft.saved = meta;
+            mediaState.unfinishedAnim = false;
+            await clearUnfinishedFlag(job.exerciseId);
+          }
+        }
+      }
+      if (view === "form" || view === "library") {
+        refreshMediaAttachMarkup();
+      }
+    })();
+  });
+  void resumePoseJobMarker();
+  void (async () => {
+    const manifest = await loadPoseModelManifest({ poseModelBaseUrl: poseBaseUrl });
+    if (manifest) mediaState.manifestLabel = formatModelTotal(manifest);
+    mediaState.modelOnDevice = await isModelOnDevice({ poseModelBaseUrl: poseBaseUrl });
+  })();
 
   function exerciseName(exerciseId: string): string {
     const lib = libraryExercises.find((e) => e.id === exerciseId);
@@ -111,6 +160,16 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   function persist(next: PersistedAppState): void {
     persisted = next;
     storage.save(next);
+  }
+
+  function commitPoseModelRemove(): void {
+    if (!pendingPoseModelRemove) return;
+    pendingPoseModelRemove = false;
+    void clearPoseModelCache().then(async () => {
+      const st = await loadMediaSettings();
+      await saveMediaSettings({ ...st, poseModelReady: false });
+      mediaState.modelOnDevice = await isModelOnDevice({ poseModelBaseUrl: poseBaseUrl });
+    });
   }
 
   function commitPendingUndo(): void {
@@ -352,14 +411,26 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         return `<div class="restore-row">
           ${thumb ? `<img class="list-thumb" src="${thumb}" alt="" />` : ""}
           <div><b>${escapeHtml(exerciseName(row.exerciseId))}</b>
-          <p class="sub">${row.kind === "clip" ? "Clip" : "Photo"}${row.kind === "clip" && row.durationS ? ` · ${formatDurationMmSs(row.durationS)}` : ""} · ${formatMegabytes(row.bytes)}</p></div>
+          <p class="sub">${row.kind === "clip" ? "Clip" : "Photo"}${row.kind === "clip" && row.durationS ? ` · ${formatDurationMmSs(row.durationS)}` : ""} · ${formatMegabytes(row.bytes)}${row.pose ? " · with animation" : ""}</p></div>
           <button type="button" class="restore-pill danger" data-act="media-list-remove" data-v="${row.id}">Remove</button>
         </div>`;
       })
       .join("");
+    const modelRow = mediaState.modelOnDevice
+      ? `<div class="sect"><h2>Pose model</h2><span>For animations</span></div>
+        <div class="group">
+          ${pendingPoseModelRemove
+            ? `<div class="undo-row" role="status"><b>Pose model removed</b> ${mediaState.manifestLabel ?? ""} freed. Your animations stay.
+              <button type="button" data-act="pose-model-undo">Undo</button></div>`
+            : `<div class="restore-row"><span class="anim-icon" aria-hidden="true">🧠</span><div><b>Pose model</b>
+              <p class="sub">${mediaState.manifestLabel ?? "Model"} · makes stick-figure animations on this phone</p></div>
+              <button type="button" class="restore-pill danger" data-act="pose-model-remove" aria-label="Remove the pose model">Remove</button></div>`}
+        </div>`
+      : "";
     return `<button type="button" class="back" data-act="back-my">‹ My exercises</button>
       <h1 class="title" tabindex="-1">Photos and clips</h1>
       <p class="sub">${escapeHtml(mediaState.mediaUsageText)}</p>
+      ${modelRow}
       <div class="group">${undo}${body}</div>`;
   }
 
@@ -392,7 +463,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
 
   function renderBar(): void {
     if (view === "form" || view === "library") {
-      const mediaDirty = isMediaDraftDirty(mediaState.draft);
+      const mediaDirty = isMediaFormDirty(mediaState);
       const importing = mediaState.draft.status === "uploading";
       const dirty =
         view === "library"
@@ -411,14 +482,19 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
               editingId: editing?.id,
               validateNow: attemptedSave,
             });
+      const poseHelper =
+        mediaState.draft.display?.kind === "clip"
+          ? poseBarHelper(mediaState.poseJob, mediaState.draft.display.id)
+          : null;
       let helper =
-        importing
+        poseHelper ??
+        (importing
           ? "Save is ready once the clip is on this phone"
           : attemptedSave && issues.length
             ? `Fix ${issues.length} field${issues.length > 1 ? "s" : ""} above to save`
             : view === "library"
               ? "Only the photo or clip changes"
-              : barHelperForRisks(unset, isEdit, dirty);
+              : barHelperForRisks(unset, isEdit, dirty));
       const danger = attemptedSave && issues.length > 0;
       const saveLabel =
         view === "library"
@@ -456,8 +532,34 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
 
   async function openExerciseMedia(exerciseId: string): Promise<void> {
     mediaSaveError = null;
-    await hydrateMediaDraft(mediaState, exerciseId);
+    mediaState.exerciseName = exerciseName(exerciseId);
+    await hydrateMediaDraft(mediaState, exerciseId, poseBaseUrl);
     render();
+  }
+
+  function mountFigureIfNeeded(): void {
+    figurePlayer?.destroy();
+    figurePlayer = null;
+    const canvas = root.querySelector<HTMLCanvasElement>("[data-role=pose-canvas]");
+    const meta = mediaState.draft.display;
+    if (!canvas || !meta?.pose || mediaState.formAnimView !== "anim" || mediaState.poseRemoveDraft) {
+      return;
+    }
+    void (async () => {
+      const blob = await readMediaBlob(meta.pose!.key);
+      if (!blob) return;
+      const reduced =
+        typeof matchMedia === "function" &&
+        matchMedia("(prefers-reduced-motion: reduce)").matches;
+      figurePlayer = new FigurePlayer({
+        canvas,
+        blob,
+        exerciseName: mediaState.exerciseName,
+        reducedMotion: reduced,
+      });
+      await figurePlayer.load();
+      figurePlayer.mount();
+    })();
   }
 
   function refreshMediaAttachMarkup(): void {
@@ -476,6 +578,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         : editing?.id ?? draftExerciseId;
     mount.innerHTML = mediaAttachHtml(mediaState, exerciseId);
     renderBar();
+    mountFigureIfNeeded();
     if (explicitFocusId) {
       document.getElementById(explicitFocusId)?.focus();
     }
@@ -597,6 +700,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         return;
       case "back-my":
         mediaSaveError = null;
+        commitPoseModelRemove();
         void discardUnsavedMedia(mediaState).then(() => {
           editingLibrary = null;
         });
@@ -672,6 +776,48 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       case "media-cancel":
         cancelMediaImport(mediaState, () => refreshMediaAttachMarkup());
         explicitFocusId = "media-pick-tile";
+        return;
+      case "pose-start":
+      case "pose-retry": {
+        const meta = mediaState.draft.display;
+        if (meta?.kind === "clip") {
+          void startPoseJob(
+            { poseModelBaseUrl: poseBaseUrl },
+            meta,
+            mediaState.exerciseName,
+            mediaState.modelOnDevice,
+          );
+        }
+        return;
+      }
+      case "pose-cancel":
+        void cancelPoseJob().then(() => refreshMediaAttachMarkup());
+        return;
+      case "pose-view":
+        if (value === "anim" || value === "clip") {
+          mediaState.formAnimView = value;
+          refreshMediaAttachMarkup();
+        }
+        return;
+      case "pose-pause":
+        figurePaused = !figurePaused;
+        figurePlayer?.setPaused(figurePaused);
+        return;
+      case "pose-remove":
+        mediaState.poseRemoveDraft = true;
+        refreshMediaAttachMarkup();
+        return;
+      case "pose-undo-remove":
+        mediaState.poseRemoveDraft = false;
+        refreshMediaAttachMarkup();
+        return;
+      case "pose-model-remove":
+        pendingPoseModelRemove = true;
+        render();
+        return;
+      case "pose-model-undo":
+        pendingPoseModelRemove = false;
+        render();
         return;
       case "media-list-remove":
         if (value) {
@@ -933,6 +1079,9 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
 
   return {
     destroy: () => {
+      figurePlayer?.destroy();
+      unsubPose();
+      void cancelPoseJob();
       void discardUnsavedMedia(mediaState);
       void commitPendingMediaListRemove(mediaState);
       document.removeEventListener("input", handleInput);

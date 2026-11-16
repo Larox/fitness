@@ -1,4 +1,5 @@
 {
+  "poseModelBaseUrl": "/models",
   "libraryPath": "data/sample-library.json",
   "overlayPath": "data/overlay.json",
   "disclaimerVersion": 1,
