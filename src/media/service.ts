@@ -173,6 +173,12 @@ async function safeDuration(file: Blob): Promise<number | undefined> {
   }
 }
 
+async function deletePoseFile(meta: ExerciseMediaMeta | null | undefined): Promise<void> {
+  if (meta?.pose?.key) {
+    await deleteMediaBlob(meta.pose.key);
+  }
+}
+
 export async function commitMediaChanges(
   exerciseId: string,
   pending: ExerciseMediaMeta | null,
@@ -184,6 +190,7 @@ export async function commitMediaChanges(
     await deleteMediaMeta(previous.id);
     await deleteMediaBlob(previous.fileKey);
     await deleteMediaBlob(previous.posterKey);
+    await deletePoseFile(previous);
     return;
   }
   if (pending) {
@@ -194,6 +201,7 @@ export async function commitMediaChanges(
     if (old && old.id !== pending.id) {
       await deleteMediaBlob(old.fileKey);
       await deleteMediaBlob(old.posterKey);
+      await deletePoseFile(old);
     }
   }
 }
@@ -206,6 +214,7 @@ export async function deleteExerciseMedia(exerciseId: string): Promise<void> {
   await deleteMediaMeta(meta.id);
   await deleteMediaBlob(meta.fileKey);
   await deleteMediaBlob(meta.posterKey);
+  await deletePoseFile(meta);
 }
 
 export async function discardPendingMedia(meta: ExerciseMediaMeta | null): Promise<void> {
@@ -214,6 +223,7 @@ export async function discardPendingMedia(meta: ExerciseMediaMeta | null): Promi
   }
   await deleteMediaBlob(meta.fileKey);
   await deleteMediaBlob(meta.posterKey);
+  await deletePoseFile(meta);
 }
 
 export async function summarizeMediaUsage(): Promise<MediaUsageSummary> {
@@ -241,6 +251,7 @@ export async function detachMediaMeta(mediaId: string): Promise<ExerciseMediaMet
 export async function deleteMediaFiles(meta: ExerciseMediaMeta): Promise<void> {
   await deleteMediaBlob(meta.fileKey);
   await deleteMediaBlob(meta.posterKey);
+  await deletePoseFile(meta);
 }
 
 export async function purgeOrphanExerciseMedia(validExerciseIds: ReadonlySet<string>): Promise<void> {
@@ -253,6 +264,7 @@ export async function purgeOrphanExerciseMedia(validExerciseIds: ReadonlySet<str
     if (!validExerciseIds.has(row.exerciseId)) {
       await deleteMediaBlob(row.fileKey);
       await deleteMediaBlob(row.posterKey);
+      await deletePoseFile(row);
     }
   }
 }

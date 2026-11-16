@@ -29,7 +29,21 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,json}"],
+        globIgnores: ["**/models/**"],
         navigateFallback: "index.html",
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) =>
+              url.pathname.startsWith("/models/") &&
+              !url.pathname.endsWith("/manifest.json"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "fitness-pose-v1",
+              expiration: { maxEntries: 16, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
     }),
   ],

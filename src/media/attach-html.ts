@@ -1,4 +1,5 @@
 import { escapeHtml } from "../setup/icons";
+import { renderAnimSection, type AnimAttachOptions } from "../pose/attach-anim-html";
 import type { MediaFormDraft } from "./draft";
 import { formatDurationMmSs, formatMegabytes } from "./format";
 import type { MediaImportError } from "./types";
@@ -46,7 +47,11 @@ function uploadRow(draft: MediaFormDraft): string {
   </div>`;
 }
 
-function attachedPreview(draft: MediaFormDraft, posterUrl: string): string {
+function attachedPreview(
+  draft: MediaFormDraft,
+  posterUrl: string,
+  anim?: AnimAttachOptions,
+): string {
   const m = draft.display!;
   if (m.kind === "photo") {
     const from =
@@ -60,33 +65,60 @@ function attachedPreview(draft: MediaFormDraft, posterUrl: string): string {
         <button type="button" data-act="media-remove" class="danger">Remove</button>
       </div>`;
   }
+  if (anim?.showToggle && m.pose) {
+    return renderAnimSection(anim);
+  }
+  const job = anim?.job;
+  const processing =
+    job?.mediaId === m.id && job.phase === "processing";
+  const downloading =
+    job?.mediaId === m.id && job.phase === "downloading";
+  if ((processing || downloading) && anim) {
+    return renderAnimSection(anim);
+  }
   const dur = formatDurationMmSs(m.durationS ?? 0);
-  return `<div class="media-frame media-clip-idle">
+  const frame = processing
+    ? ""
+    : `<div class="media-frame media-clip-idle">
       <img src="${posterUrl}" alt="" class="media-cover" />
       <span class="media-duration-badge">${dur}</span>
-    </div>
-    <p class="media-meta"><b>Clip</b><span>${dur}</span><span>${formatMegabytes(m.bytes)}</span><span>Plays muted in Today</span></p>
+    </div>`;
+  const metaActions = processing
+    ? ""
+    : `<p class="media-meta"><b>Clip</b><span>${dur}</span><span>${formatMegabytes(m.bytes)}</span><span>Plays muted in Today</span></p>
     <div class="media-actions">
       <button type="button" data-act="media-replace">Replace</button>
       <button type="button" data-act="media-remove" class="danger">Remove</button>
     </div>`;
+  const animBlock = anim ? `<div class="anim-divider"></div>${renderAnimSection(anim)}` : "";
+  return `${frame}${metaActions}${animBlock}`;
 }
 
 export function renderMediaAttachSection(
   draft: MediaFormDraft,
-  options: { changedDot: boolean; posterUrl?: string; removedStatus?: boolean },
+  options: {
+    changedDot: boolean;
+    posterUrl?: string;
+    removedStatus?: boolean;
+    removedHasAnimation?: boolean;
+    anim?: AnimAttachOptions;
+  },
 ): string {
   const changed = options.changedDot ? '<span class="changed-dot" aria-hidden="true"></span>' : "";
   let body = "";
   if (draft.status === "uploading") {
     body = uploadRow(draft);
   } else if (draft.display && options.posterUrl) {
-    body = attachedPreview(draft, options.posterUrl);
+    body = attachedPreview(draft, options.posterUrl, options.anim);
   } else {
     const tileLabel = draft.error ? "Choose another photo or clip" : "Add photo or clip";
     const removed =
       options.removedStatus
-        ? `<div class="media-removed" role="status">Photo removed. It's deleted from this phone when you save.
+        ? `<div class="media-removed" role="status">${
+            options.removedHasAnimation
+              ? "Clip and its animation removed. They're deleted from this phone when you save."
+              : "Photo removed. It's deleted from this phone when you save."
+          }
             <button type="button" id="media-undo" data-act="media-undo">Undo</button></div>`
         : "";
     body = `${removed}<button type="button" class="media-add" data-act="media-pick" id="media-pick-tile">
