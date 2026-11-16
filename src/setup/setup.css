@@ -474,6 +474,62 @@ svg {
   color: var(--muted);
 }
 
+.prow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  text-align: left;
+  cursor: default;
+}
+
+.prow:disabled {
+  opacity: 1;
+}
+
+.prow .pday {
+  flex: none;
+  width: 2.5rem;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
+  color: var(--muted);
+}
+
+.prow .ptxt {
+  flex: 1;
+  min-width: 0;
+}
+
+.prow .ptitle {
+  display: block;
+  font-size: var(--fs-17);
+  font-weight: var(--fw-medium);
+}
+
+.prow .pmeta {
+  display: block;
+  font-size: var(--fs-13);
+  color: var(--muted);
+}
+
+.prow .ptag {
+  display: inline;
+  font-weight: var(--fw-medium);
+  color: var(--text);
+}
+
+.prow .pcaution {
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  display: grid;
+  place-items: center;
+  color: var(--caution);
+}
+
 .bar {
   position: fixed;
   left: 0;

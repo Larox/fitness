@@ -1,7 +1,9 @@
 import "./exercises/exercise.css";
 import { fetchAppConfig } from "./config/fetch-config";
 import { mountExerciseFlow } from "./exercises/exercise-screen";
+import { mergeExercisesById } from "./exercises/planning";
 import { fetchImportedLibrary } from "./library/fetch-library";
+import type { PlanBuildContext } from "./plan/apply-settings-save";
 import { mergePersistedState } from "./setup/merge";
 import { renderConfigError, mountSetupScreen } from "./setup/setup-screen";
 import { createLocalStorageAdapter } from "./setup/storage";
@@ -55,6 +57,27 @@ export async function bootApp(root: HTMLElement): Promise<void> {
       hurtExerciseCount: counts.hurt,
       onOpenMyExercises: () => showExercises("my"),
       onOpenHurtList: () => showExercises("hurt"),
+      getPlanContext: (): PlanBuildContext => {
+        const persisted = mergePersistedState(storage.load(), config);
+        const exercisesById = mergeExercisesById(
+          library.exercises,
+          persisted.userExercises ?? [],
+          config.conditions,
+        );
+        const excludedExerciseIds = new Set(
+          (persisted.hurtExclusions ?? []).map((row) => row.exerciseId),
+        );
+        const routineNotesById = new Map(
+          library.routines.map((routine) => [routine.id, routine.notes]),
+        );
+        return {
+          conditions: config.conditions,
+          routines: library.routines,
+          exercisesById,
+          excludedExerciseIds,
+          routineNotesById,
+        };
+      },
     });
   }
 

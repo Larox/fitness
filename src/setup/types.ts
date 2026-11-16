@@ -1,5 +1,6 @@
 import type { HurtRestoreUndo } from "../exercises/hurt";
 import type { DeletedExerciseRecord, HurtExclusion, UserExercise } from "../exercises/types";
+import type { WeekPlan } from "../plan/types";
 
 /** User training preferences persisted on device. */
 export interface TrainingSettings {
@@ -27,6 +28,8 @@ export interface PersistedAppState {
   deletedExerciseHistory?: DeletedExerciseRecord[];
   /** Sessions still scheduled in the current plan week (for re-filter and restore semantics). */
   weekSessionsRemaining?: WeekSessionCandidate[];
+  /** Current week plan (built after setup save). */
+  weekPlan?: WeekPlan;
 }
 
 export interface SettingsChangeSummary {

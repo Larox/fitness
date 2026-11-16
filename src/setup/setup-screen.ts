@@ -12,6 +12,9 @@ import {
   needsDisclaimerAcknowledgement,
 } from "./disclaimer";
 import { escapeHtml, ICONS } from "./icons";
+import { applyTrainingSettingsSave } from "../plan/apply-settings-save";
+import type { PlanBuildContext } from "../plan/apply-settings-save";
+import { renderThisWeekList } from "../plan/render-week";
 import { mergePersistedState } from "./merge";
 import type { SettingsStorage } from "./storage";
 import {
@@ -42,6 +45,7 @@ export interface MountSetupScreenOptions {
   hurtExerciseCount?: number;
   onOpenMyExercises?: () => void;
   onOpenHurtList?: () => void;
+  getPlanContext?: () => PlanBuildContext;
 }
 
 function cloneSettings(settings: TrainingSettings): TrainingSettings {
@@ -99,7 +103,17 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
   getState: () => PersistedAppState;
   destroy: () => void;
 } {
-  const { config, storage, root, onSaved, myExerciseCount = 0, hurtExerciseCount = 0, onOpenMyExercises, onOpenHurtList } = options;
+  const {
+    config,
+    storage,
+    root,
+    onSaved,
+    myExerciseCount = 0,
+    hurtExerciseCount = 0,
+    onOpenMyExercises,
+    onOpenHurtList,
+    getPlanContext,
+  } = options;
 
   let persisted = mergePersistedState(storage.load(), config);
   const saved = cloneSettings(persisted.settings);
@@ -188,6 +202,10 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
     let html = `<header class="hdr"><p class="overline">${isSetupMode ? "Setup" : "Settings"}</p>
       <h1 class="title">${isSetupMode ? "Plan your training" : "Training settings"}</h1>
       <p class="sub">${isSetupMode ? "Pick what fits. You can change any of this later in Settings." : "Changes apply from your next plan."}</p></header>`;
+
+    if (!isSetupMode && persisted.weekPlan) {
+      html += renderThisWeekList(persisted.weekPlan);
+    }
 
     html += `<div class="sect"><h2>Schedule</h2></div><div class="group">
       <div class="field"><div class="flabel"><b>Days per week${changedDot(screen.draft.daysPerWeek !== screen.saved.daysPerWeek)}</b></div>
@@ -388,11 +406,14 @@ export function mountSetupScreen(options: MountSetupScreenOptions): {
         const summary = summarizeSettingsChange(screen.saved, screen.draft);
         const nextSettings = cloneSettings(screen.draft);
         screen.saved = nextSettings;
-        const next: PersistedAppState = {
+        let next: PersistedAppState = {
           ...persisted,
           settings: nextSettings,
           setupComplete: true,
         };
+        if (getPlanContext) {
+          next = applyTrainingSettingsSave(next, nextSettings, summary, getPlanContext());
+        }
         persisted = next;
         persist(next);
         screen.mode = "settings";
