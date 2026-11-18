@@ -15,6 +15,21 @@ export function weekStartKey(date: Date): string {
 
 const LONG_DAY = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
 
+/**
+ * Week-start key for a plan row's session, relative to the calendar day `reference`.
+ * When reference is later in the week than the row (e.g. Sunday previewing Monday), the
+ * session is treated as belonging to the following calendar week.
+ */
+export function weekStartForPlanRow(reference: Date, rowDayIndex: number): string {
+  const todayIndex = weekPlanDayIndex(reference);
+  const sessionDate = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate());
+  sessionDate.setDate(sessionDate.getDate() - todayIndex + rowDayIndex);
+  if (todayIndex > rowDayIndex) {
+    sessionDate.setDate(sessionDate.getDate() + 7);
+  }
+  return weekStartKey(sessionDate);
+}
+
 export function formatTodayOverline(date: Date): string {
   const day = LONG_DAY[weekPlanDayIndex(date)]!;
   const parts = new Intl.DateTimeFormat("en-GB", {

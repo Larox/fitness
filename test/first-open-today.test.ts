@@ -56,7 +56,7 @@ describe("first open: ready Today from sample library", () => {
   it("never leaves Today empty on any weekday", () => {
     const { plan, exercisesById, active } = freshStateWithPlan();
     for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
-      const view = resolveTodayView(plan, dayIndex, null);
+      const view = resolveTodayView(plan, dayIndex, {});
       expect(view, `dayIndex ${dayIndex}`).not.toBeNull();
       expect(view!.session.scheduled.length).toBeGreaterThan(0);
       const report = assertTodaySessionSafe(view!.session, exercisesById, active);
@@ -74,7 +74,7 @@ describe("first open: ready Today from sample library", () => {
     const { plan } = freshStateWithPlan();
     const restDay = plan.rows.find((row) => row.slotKind === "rest");
     expect(restDay).toBeDefined();
-    const view = resolveTodayView(plan, restDay!.dayIndex, null);
+    const view = resolveTodayView(plan, restDay!.dayIndex, {});
     expect(view?.mode).toBe("preview");
     expect(view?.row.slotKind).not.toBe("rest");
   });

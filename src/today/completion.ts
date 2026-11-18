@@ -15,6 +15,10 @@ export function markSessionCompleted(
 ): PersistedAppState {
   const key = completionStorageKey(weekStart, sessionId);
   const completedSessions = { ...(state.completedSessions ?? {}) };
+  const existing = completedSessions[key];
+  if (existing && !existing.partial && summary.partial) {
+    return state;
+  }
   completedSessions[key] = summary;
   if (completedSessions[sessionId]) {
     delete completedSessions[sessionId];

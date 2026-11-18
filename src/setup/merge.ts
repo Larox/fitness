@@ -150,7 +150,23 @@ export function mergePersistedState(
     weekPlan: sanitizeWeekPlan(stored.weekPlan),
     completedSessions: sanitizeCompletedSessions(stored.completedSessions),
     exerciseBellKg: sanitizeExerciseBellMap(stored.exerciseBellKg),
+    trainEarlySessionByWeek: sanitizeTrainEarlyMap(stored.trainEarlySessionByWeek),
   };
+}
+
+function sanitizeTrainEarlyMap(
+  raw: unknown,
+): PersistedAppState["trainEarlySessionByWeek"] {
+  if (!isPlainObject(raw)) {
+    return undefined;
+  }
+  const out: NonNullable<PersistedAppState["trainEarlySessionByWeek"]> = {};
+  for (const [week, sessionId] of Object.entries(raw)) {
+    if (typeof sessionId === "string" && sessionId.length > 0) {
+      out[week] = sessionId;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 function sanitizeCompletedSessions(

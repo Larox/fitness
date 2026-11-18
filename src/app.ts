@@ -127,8 +127,10 @@ export async function bootApp(root: HTMLElement): Promise<void> {
           let next = acknowledgeDisclaimer(current, config, new Date());
           next = ensureWeekPlan(next, getPlanContext());
           storage.save(next);
+          todayMount?.reloadPersisted();
           disclaimerGate?.destroy();
           disclaimerGate = null;
+          root.querySelector<HTMLElement>(".title")?.focus();
         },
       });
     }

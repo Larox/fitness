@@ -56,7 +56,12 @@ import {
 import { getSessionLog, deleteSessionLog, saveSessionLog } from "./session-log-store";
 import { resolveSavedSessionLogId, sessionLogId } from "./session-restore";
 import type { ExerciseSessionLog, SessionLogRecord } from "./types";
-import { formatTodayOverline, weekPlanDayIndex, weekStartKey } from "./weekday";
+import {
+  formatTodayOverline,
+  weekPlanDayIndex,
+  weekStartForPlanRow,
+  weekStartKey,
+} from "./weekday";
 
 function viewAllowsLogging(mode: TodayViewMode): boolean {
   return mode === "scheduled" || mode === "trained_early";
@@ -83,6 +88,7 @@ export interface MountTodayScreenOptions {
 
 export function mountTodayScreen(options: MountTodayScreenOptions): {
   destroy: () => void;
+  reloadPersisted: () => void;
 } {
   const { config, storage, root, exercisesById, routineSourceById, routinesById, onOpenSettings } =
     options;
@@ -107,10 +113,21 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
   let draftRestored = false;
   let completionHydrated = false;
   let draftFlushScheduled = false;
-  let trainEarlySessionId: string | null = null;
+  let trainEarlySessionId: string | null =
+    persisted.trainEarlySessionByWeek?.[weekStartKey(now())] ?? null;
 
   function currentWeekStart(): string {
     return weekStartKey(now());
+  }
+
+  function sessionWeekStart(row: WeekPlanRow): string {
+    return weekStartForPlanRow(now(), row.dayIndex);
+  }
+
+  function reloadPersistedFromStorage(): void {
+    persisted = mergePersistedState(storage.load(), config);
+    trainEarlySessionId =
+      persisted.trainEarlySessionByWeek?.[currentWeekStart()] ?? trainEarlySessionId;
   }
 
   function flushSessionDraft(): void {
@@ -119,7 +136,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
       return;
     }
     const { row, session } = view;
-    const week = currentWeekStart();
+    const week = sessionWeekStart(row);
     const draftCards: Record<string, SessionDraftCardState> = {};
     for (const sched of session.scheduled) {
       const state = cards[sched.exerciseId];
@@ -148,7 +165,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
     row: WeekPlanRow,
     session: WeekPlanSessionResult,
   ): Promise<void> {
-    const week = currentWeekStart();
+    const week = sessionWeekStart(row);
     const existing = sessionCompletionSummary(
       persisted.completedSessions,
       row.sessionId,
@@ -207,7 +224,11 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
     if (!plan) {
       return null;
     }
-    return resolveTodayView(plan, weekPlanDayIndex(now()), trainEarlySessionId);
+    return resolveTodayView(plan, weekPlanDayIndex(now()), {
+      trainEarlySessionId,
+      completedSessions: persisted.completedSessions,
+      referenceDate: now(),
+    });
   }
 
   function ensureCards(session: WeekPlanSessionResult): void {
@@ -492,7 +513,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
 
     root.innerHTML = `<header class="hdr"><div class="hdr-top"><p class="overline">${escapeHtml(formatTodayOverline(now()))}</p>
       <button type="button" class="today-settings-link" data-act="today-settings">Settings</button></div>
-      <h1 class="title">${escapeHtml(row.title)}</h1>
+      <h1 class="title" tabindex="-1">${escapeHtml(row.title)}</h1>
       <p class="meta">${plannedMeta}${locationTag}<span>≈ ${row.minutes} min</span>${!isRest ? `<span class="dot">·</span><span>${session.scheduled.length} exercises</span>` : `<span>· optional mobility</span>`}</p>
       ${!isRest && canLog ? `<div class="prog" aria-label="Session progress"><span class="segs">${segs}</span><b>${progress.done} of ${progress.total} done</b></div>` : ""}
     </header>
@@ -515,8 +536,9 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
     }
   }
 
-  function persist(next: PersistedAppState): void {
-    persisted = next;
+  function persist(merge: (fresh: PersistedAppState) => PersistedAppState): void {
+    const fresh = mergePersistedState(storage.load(), config);
+    persisted = merge(fresh);
     storage.save(persisted);
   }
 
@@ -595,10 +617,21 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
       const view = resolvedToday();
       if (view?.mode === "preview") {
         trainEarlySessionId = view.row.sessionId;
+        const sessionId = view.row.sessionId;
+        const session = view.session;
         cards = {};
         draftRestored = false;
         completionHydrated = false;
         sessionSaved = false;
+        const viewerWeek = currentWeekStart();
+        persist((fresh) => ({
+          ...fresh,
+          trainEarlySessionByWeek: {
+            ...(fresh.trainEarlySessionByWeek ?? {}),
+            [viewerWeek]: sessionId,
+          },
+        }));
+        void hydrateSessionState(view.row, session).then(() => render());
         render();
       }
       return;
@@ -650,7 +683,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
               markedAt: now().toISOString(),
               from: "today",
             });
-            persist({ ...persisted, hurtExclusions: exclusions });
+            persist((fresh) => ({ ...fresh, hurtExclusions: exclusions }));
           }
           if (!cards[exerciseId]!.done) {
             cards[exerciseId]!.expanded = false;
@@ -670,7 +703,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
           cards[exerciseId]!.bellKg = kg;
           const bells = { ...(persisted.exerciseBellKg ?? {}) };
           bells[exerciseId] = kg;
-          persist({ ...persisted, exerciseBellKg: bells });
+          persist((fresh) => ({ ...fresh, exerciseBellKg: bells }));
           render();
           scheduleDraftFlush();
         }
@@ -726,11 +759,23 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
         sessionSaved = true;
         savedAt = completedAt;
         void saveSessionLog(log);
-        const week = currentWeekStart();
+        const week = sessionWeekStart(row);
         void deleteSessionDraft(buildSessionDraftId(week, row.sessionId));
-        persist(
-          markSessionCompleted(persisted, row.sessionId, week, { completedAt, partial }),
-        );
+        const viewerWeek = currentWeekStart();
+        persist((fresh) => {
+          let next = markSessionCompleted(fresh, row.sessionId, week, { completedAt, partial });
+          if (next.trainEarlySessionByWeek?.[viewerWeek] === row.sessionId) {
+            const trainEarly = { ...next.trainEarlySessionByWeek };
+            delete trainEarly[viewerWeek];
+            next = {
+              ...next,
+              trainEarlySessionByWeek:
+                Object.keys(trainEarly).length > 0 ? trainEarly : undefined,
+            };
+            trainEarlySessionId = null;
+          }
+          return next;
+        });
         window.scrollTo({ top: 0, behavior: "smooth" });
         render();
         break;
@@ -742,7 +787,9 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
         sessionSaved = false;
         savedAt = null;
         savedLogId = null;
-        persist(unmarkSessionCompleted(persisted, row.sessionId, currentWeekStart()));
+        persist((fresh) =>
+          unmarkSessionCompleted(fresh, row.sessionId, sessionWeekStart(row)),
+        );
         render();
         break;
       }
@@ -797,6 +844,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
   })();
 
   return {
+    reloadPersisted: reloadPersistedFromStorage,
     destroy: () => {
       flushSessionDraft();
       document.removeEventListener("click", handleClick);
