@@ -4,6 +4,9 @@ import { mountExerciseFlow } from "./exercises/exercise-screen";
 import { mergeExercisesById } from "./exercises/planning";
 import { fetchImportedLibrary } from "./library/fetch-library";
 import type { PlanBuildContext } from "./plan/apply-settings-save";
+import { ensureWeekPlan } from "./plan/ensure-week-plan";
+import { mountDisclaimerGate } from "./setup/disclaimer-gate";
+import { acknowledgeDisclaimer, needsDisclaimerAcknowledgement } from "./setup/disclaimer";
 import { createConditionLabelContext } from "./setup/condition-labels";
 import { mergePersistedState } from "./setup/merge";
 import { renderConfigError, mountSetupScreen } from "./setup/setup-screen";
@@ -39,6 +42,7 @@ export async function bootApp(root: HTMLElement): Promise<void> {
   let setupMount: ReturnType<typeof mountSetupScreen> | null = null;
   let exerciseMount: ReturnType<typeof mountExerciseFlow> | null = null;
   let todayMount: ReturnType<typeof mountTodayScreen> | null = null;
+  let disclaimerGate: ReturnType<typeof mountDisclaimerGate> | null = null;
 
   const routineSourceById = new Map(
     library.routines.map((routine) => [routine.id, routine.source] as const),
@@ -86,13 +90,25 @@ export async function bootApp(root: HTMLElement): Promise<void> {
     );
   }
 
+  function syncedPersisted(): ReturnType<typeof mergePersistedState> {
+    const merged = mergePersistedState(storage.load(), config);
+    const withPlan = ensureWeekPlan(merged, getPlanContext());
+    if (!merged.weekPlan && withPlan.weekPlan) {
+      storage.save(withPlan);
+    }
+    return withPlan;
+  }
+
   function showToday(): void {
     setupMount?.destroy();
     setupMount = null;
     exerciseMount?.destroy();
     exerciseMount = null;
+    disclaimerGate?.destroy();
+    disclaimerGate = null;
     document.getElementById("setup-bar")?.remove();
     document.getElementById("setup-layer")?.remove();
+    syncedPersisted();
     todayMount = mountTodayScreen({
       config,
       storage,
@@ -102,6 +118,20 @@ export async function bootApp(root: HTMLElement): Promise<void> {
       routinesById,
       onOpenSettings: () => showSetup(),
     });
+    const persisted = mergePersistedState(storage.load(), config);
+    if (needsDisclaimerAcknowledgement(persisted, config)) {
+      disclaimerGate = mountDisclaimerGate({
+        config,
+        onAcknowledge: () => {
+          const current = mergePersistedState(storage.load(), config);
+          let next = acknowledgeDisclaimer(current, config, new Date());
+          next = ensureWeekPlan(next, getPlanContext());
+          storage.save(next);
+          disclaimerGate?.destroy();
+          disclaimerGate = null;
+        },
+      });
+    }
   }
 
   function showSetup(): void {
@@ -146,7 +176,7 @@ export async function bootApp(root: HTMLElement): Promise<void> {
       editId,
       onBackToSettings: () => {
         const persisted = mergePersistedState(storage.load(), config);
-        if (persisted.setupComplete && persisted.weekPlan) {
+        if (persisted.weekPlan) {
           showToday();
         } else {
           showSetup();
@@ -155,10 +185,6 @@ export async function bootApp(root: HTMLElement): Promise<void> {
     });
   }
 
-  const initial = mergePersistedState(storage.load(), config);
-  if (initial.setupComplete && initial.weekPlan) {
-    showToday();
-  } else {
-    showSetup();
-  }
+  syncedPersisted();
+  showToday();
 }

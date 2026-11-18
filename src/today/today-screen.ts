@@ -30,7 +30,11 @@ import {
 import { formatScheduledDose } from "./dose-label";
 import { exerciseUsesKettlebell } from "./kettlebell";
 import { moderateCautionBanner } from "./moderate-caution";
-import { rowForDay } from "./resolve-session";
+import {
+  resolveTodayView,
+  type ResolvedTodayView,
+  type TodayViewMode,
+} from "./resolve-today-session";
 import {
   applySetMetric,
   clampSetMetric,
@@ -53,6 +57,10 @@ import { getSessionLog, deleteSessionLog, saveSessionLog } from "./session-log-s
 import { resolveSavedSessionLogId, sessionLogId } from "./session-restore";
 import type { ExerciseSessionLog, SessionLogRecord } from "./types";
 import { formatTodayOverline, weekPlanDayIndex, weekStartKey } from "./weekday";
+
+function viewAllowsLogging(mode: TodayViewMode): boolean {
+  return mode === "scheduled" || mode === "trained_early";
+}
 
 interface CardState {
   expanded: boolean;
@@ -99,17 +107,18 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
   let draftRestored = false;
   let completionHydrated = false;
   let draftFlushScheduled = false;
+  let trainEarlySessionId: string | null = null;
 
   function currentWeekStart(): string {
     return weekStartKey(now());
   }
 
   function flushSessionDraft(): void {
-    const row = todayRow();
-    const session = todaySession();
-    if (!row || !session || sessionSaved) {
+    const view = resolvedToday();
+    if (!view || !viewAllowsLogging(view.mode) || sessionSaved) {
       return;
     }
+    const { row, session } = view;
     const week = currentWeekStart();
     const draftCards: Record<string, SessionDraftCardState> = {};
     for (const sched of session.scheduled) {
@@ -193,21 +202,12 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
     });
   }
 
-  function todayRow(): WeekPlanRow | undefined {
+  function resolvedToday(): ResolvedTodayView | null {
     const plan = persisted.weekPlan;
     if (!plan) {
-      return undefined;
+      return null;
     }
-    return rowForDay(plan, weekPlanDayIndex(now()));
-  }
-
-  function todaySession(): WeekPlanSessionResult | undefined {
-    const row = todayRow();
-    const plan = persisted.weekPlan;
-    if (!row || !plan) {
-      return undefined;
-    }
-    return plan.sessions[row.sessionId];
+    return resolveTodayView(plan, weekPlanDayIndex(now()), trainEarlySessionId);
   }
 
   function ensureCards(session: WeekPlanSessionResult): void {
@@ -250,6 +250,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
   function renderExerciseCard(
     sched: WeekPlanSessionResult["scheduled"][number],
     row: WeekPlanRow,
+    interactionsDisabled = false,
   ): string {
     const exercise = exercisesById.get(sched.exerciseId);
     const state = cards[sched.exerciseId]!;
@@ -299,7 +300,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
             exercise.name,
             sched,
             state.setLogs,
-            sessionSaved,
+            sessionSaved || interactionsDisabled,
           )
         : "";
 
@@ -311,7 +312,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
 
     return `<article class="tcard${state.done ? " is-done" : ""}" data-eid="${sched.exerciseId}">
       <div class="trow">
-        <button type="button" class="tcheck" aria-pressed="${state.done ? "true" : "false"}" aria-label="Done: ${escapeHtml(exercise?.name ?? sched.exerciseId)}" data-act="today-done" data-id="${sched.exerciseId}" ${sessionSaved ? "disabled" : ""}><span class="ring">${ICONS.ck}</span></button>
+        <button type="button" class="tcheck" aria-pressed="${state.done ? "true" : "false"}" aria-label="Done: ${escapeHtml(exercise?.name ?? sched.exerciseId)}" data-act="today-done" data-id="${sched.exerciseId}" ${sessionSaved || interactionsDisabled ? "disabled" : ""}><span class="ring">${ICONS.ck}</span></button>
         <button type="button" class="thead" aria-expanded="${state.expanded ? "true" : "false"}" data-act="today-expand" data-id="${sched.exerciseId}">
           <span><span class="ename">${escapeHtml(exercise?.name ?? sched.exerciseId)}</span>${doseLine}</span>
           <span aria-hidden="true">${ICONS.chev}</span>
@@ -403,15 +404,18 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
 
   function render(): void {
     root.className = "today-shell";
-    const row = todayRow();
-    const session = todaySession();
+    const view = resolvedToday();
 
-    if (!row || !session) {
-      root.innerHTML = `<header class="hdr"><p class="overline">Today</p><h1 class="title">No plan yet</h1><p class="meta">Finish setup to build your week plan.</p></header>
+    if (!view) {
+      root.innerHTML = `<header class="hdr"><p class="overline">Today</p><h1 class="title">No plan yet</h1><p class="meta">Open settings if this does not load.</p></header>
         <button type="button" class="today-settings-link" data-act="today-settings">Open settings</button>`;
       bar.innerHTML = "";
       return;
     }
+
+    const { row, session, mode } = view;
+    const canLog = viewAllowsLogging(mode);
+    const isPreview = mode === "preview";
 
     ensureCards(session);
     const progress = countProgress(session);
@@ -423,13 +427,19 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
       })
       .join("");
 
-    const isRest = row.slotKind === "rest";
+    const isRest = row.slotKind === "rest" && !isPreview && mode !== "trained_early";
     const locationTag =
       row.location === null
         ? isRest
           ? '<span class="tag rest-tag">Optional</span>'
           : ""
         : `<span class="tag">${row.location === "home" ? "Home" : "Gym"}</span>`;
+
+    const previewIntro = isPreview
+      ? `<section class="restcard"><p><b>Rest day.</b> Your next session is planned for <b>${escapeHtml(view.scheduledDayLabel ?? row.dayLabel)}</b>. You can train it today if you want.</p></section>`
+      : mode === "trained_early"
+        ? `<section class="restcard"><p><b>Training early.</b> This session was planned for <b>${escapeHtml(row.dayLabel)}</b>.</p></section>`
+        : "";
 
     const changeNotes =
       sessionSaved || session.dropped.length === 0
@@ -453,11 +463,14 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
       ? `<section class="restcard"><p><b>Rest is part of the plan.</b> If you feel like moving, here are easy minutes. Skipping is fine.</p></section>`
       : "";
 
-    const list = session.scheduled.map((sched) => renderExerciseCard(sched, row)).join("");
+    const list = session.scheduled
+      .map((sched) => renderExerciseCard(sched, row, !canLog || sessionSaved))
+      .join("");
     const partial = progress.done > 0 && progress.done + progress.hurt < progress.total;
-    const canSave = progress.done > 0 && !sessionSaved;
-    const helper =
-      progress.done === 0
+    const canSave = canLog && progress.done > 0 && !sessionSaved;
+    const helper = isPreview
+      ? "Previewing your next session."
+      : progress.done === 0
         ? isRest
           ? "Optional. Tick a move if you do it."
           : "Tick off an exercise to finish."
@@ -467,20 +480,34 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
             ? `${progress.done} done · ${progress.hurt} stopped`
             : "All done. Nice work.";
 
-    const saveLabel = isRest ? "Mark mobility done" : "Mark session done";
+    const saveLabel = isPreview
+      ? "Train it today"
+      : isRest
+        ? "Mark mobility done"
+        : "Mark session done";
+
+    const plannedMeta = isPreview
+      ? `<span class="tag rest-tag">Planned · ${escapeHtml(view.scheduledDayLabel ?? row.dayLabel)}</span>`
+      : "";
 
     root.innerHTML = `<header class="hdr"><div class="hdr-top"><p class="overline">${escapeHtml(formatTodayOverline(now()))}</p>
       <button type="button" class="today-settings-link" data-act="today-settings">Settings</button></div>
       <h1 class="title">${escapeHtml(row.title)}</h1>
-      <p class="meta">${locationTag}<span>≈ ${row.minutes} min</span>${!isRest ? `<span class="dot">·</span><span>${session.scheduled.length} exercises</span>` : `<span>· optional mobility</span>`}</p>
-      ${!isRest ? `<div class="prog" aria-label="Session progress"><span class="segs">${segs}</span><b>${progress.done} of ${progress.total} done</b></div>` : ""}
+      <p class="meta">${plannedMeta}${locationTag}<span>≈ ${row.minutes} min</span>${!isRest ? `<span class="dot">·</span><span>${session.scheduled.length} exercises</span>` : `<span>· optional mobility</span>`}</p>
+      ${!isRest && canLog ? `<div class="prog" aria-label="Session progress"><span class="segs">${segs}</span><b>${progress.done} of ${progress.total} done</b></div>` : ""}
     </header>
     ${completionBanner}
     ${changeNotes}
+    ${previewIntro}
     ${restIntro}
     <div class="list">${list}</div>`;
 
-    renderBar(canSave, helper, saveLabel);
+    if (isPreview) {
+      bar.innerHTML = `<div class="in"><p class="help" aria-live="polite">${escapeHtml(helper)}</p>
+        <button type="button" class="primary" data-act="today-train-early">Train it today</button></div>`;
+    } else {
+      renderBar(canSave, helper, saveLabel);
+    }
 
     const expanded = session.scheduled.find((s) => cards[s.exerciseId]?.expanded);
     if (expanded) {
@@ -558,17 +585,31 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
       return;
     }
     const act = target.dataset.act;
-    const session = todaySession();
-    const row = todayRow();
 
     if (act === "today-settings") {
       onOpenSettings();
       return;
     }
 
-    if (!session || !row) {
+    if (act === "today-train-early") {
+      const view = resolvedToday();
+      if (view?.mode === "preview") {
+        trainEarlySessionId = view.row.sessionId;
+        cards = {};
+        draftRestored = false;
+        completionHydrated = false;
+        sessionSaved = false;
+        render();
+      }
       return;
     }
+
+    const view = resolvedToday();
+    if (!view || !viewAllowsLogging(view.mode)) {
+      return;
+    }
+    const session = view.session;
+    const row = view.row;
 
     const exerciseId = target.dataset.id;
 
@@ -718,10 +759,11 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
     if (sessionSaved) {
       return;
     }
-    const session = todaySession();
-    if (!session) {
+    const view = resolvedToday();
+    if (!view || !viewAllowsLogging(view.mode)) {
       return;
     }
+    const session = view.session;
     const exerciseId = target.dataset.id;
     const setIndex = Number(target.dataset.idx);
     const card = exerciseId ? cards[exerciseId] : undefined;
@@ -747,10 +789,9 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
   document.addEventListener("click", handleClick);
   document.addEventListener("input", handleInput);
   void (async () => {
-    const row = todayRow();
-    const session = todaySession();
-    if (row && session) {
-      await hydrateSessionState(row, session);
+    const view = resolvedToday();
+    if (view && viewAllowsLogging(view.mode)) {
+      await hydrateSessionState(view.row, view.session);
     }
     render();
   })();
