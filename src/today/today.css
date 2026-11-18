@@ -178,13 +178,20 @@
   background: var(--surface-2);
 }
 
+.today-shell .etitle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
 .today-shell .ename {
   font-size: var(--fs-17);
   font-weight: var(--fw-semibold);
 }
 
 .today-shell .edose {
-  margin-top: 2px;
   font-size: var(--fs-17);
   font-weight: var(--fw-semibold);
   color: var(--primary);

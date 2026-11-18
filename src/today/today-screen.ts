@@ -228,6 +228,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
       trainEarlySessionId,
       completedSessions: persisted.completedSessions,
       referenceDate: now(),
+      holdTrainEarlyCompleted: sessionSaved && trainEarlySessionId !== null,
     });
   }
 
@@ -281,6 +282,12 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
       !state.done && !state.hurt && exercise
         ? moderateCautionBanner(exercise, config.conditions, active, labels.conditionLabel)
         : null;
+    const exerciseName = exercise?.name ?? sched.exerciseId;
+    const doseAccessible = state.done
+      ? "Done"
+      : state.hurt
+        ? "Stopped"
+        : `${dose}${swapped ? " swapped in" : ""}`;
     const doseLine = state.done
       ? '<span class="edose done-txt">Done</span>'
       : state.hurt
@@ -334,8 +341,8 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
     return `<article class="tcard${state.done ? " is-done" : ""}" data-eid="${sched.exerciseId}">
       <div class="trow">
         <button type="button" class="tcheck" aria-pressed="${state.done ? "true" : "false"}" aria-label="Done: ${escapeHtml(exercise?.name ?? sched.exerciseId)}" data-act="today-done" data-id="${sched.exerciseId}" ${sessionSaved || interactionsDisabled ? "disabled" : ""}><span class="ring">${ICONS.ck}</span></button>
-        <button type="button" class="thead" aria-expanded="${state.expanded ? "true" : "false"}" data-act="today-expand" data-id="${sched.exerciseId}">
-          <span><span class="ename">${escapeHtml(exercise?.name ?? sched.exerciseId)}</span>${doseLine}</span>
+        <button type="button" class="thead" aria-expanded="${state.expanded ? "true" : "false"}" aria-label="${escapeHtml(exerciseName)} ${escapeHtml(doseAccessible)}" data-act="today-expand" data-id="${sched.exerciseId}">
+          <span class="etitle"><span class="ename">${escapeHtml(exerciseName)}</span>${doseLine}</span>
           <span aria-hidden="true">${ICONS.chev}</span>
         </button>
       </div>
@@ -772,7 +779,6 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
               trainEarlySessionByWeek:
                 Object.keys(trainEarly).length > 0 ? trainEarly : undefined,
             };
-            trainEarlySessionId = null;
           }
           return next;
         });

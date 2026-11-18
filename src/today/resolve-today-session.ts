@@ -32,6 +32,8 @@ export interface ResolveTodayViewOptions {
   trainEarlySessionId?: string | null;
   completedSessions?: PersistedAppState["completedSessions"];
   referenceDate?: Date;
+  /** Keep the in-flight train-early session on screen after save until the next load. */
+  holdTrainEarlyCompleted?: boolean;
 }
 
 export function resolveTodayView(
@@ -42,6 +44,7 @@ export function resolveTodayView(
   const trainEarlySessionId = options.trainEarlySessionId ?? null;
   const completedSessions = options.completedSessions;
   const referenceDate = options.referenceDate ?? new Date();
+  const holdTrainEarlyCompleted = options.holdTrainEarlyCompleted === true;
 
   function sessionDone(row: WeekPlanRow): boolean {
     if (!completedSessions) {
@@ -61,7 +64,12 @@ export function resolveTodayView(
       (candidate) => candidate.sessionId === trainEarlySessionId && candidate.slotKind !== "rest",
     );
     const session = row ? plan.sessions[row.sessionId] : undefined;
-    if (row && session && session.scheduled.length > 0 && !sessionDone(row)) {
+    if (
+      row &&
+      session &&
+      session.scheduled.length > 0 &&
+      (!sessionDone(row) || holdTrainEarlyCompleted)
+    ) {
       return { row, session, mode: "trained_early" };
     }
   }
