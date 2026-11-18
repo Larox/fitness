@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  clipPairValidationMessage,
   libraryVideoUrlWithFragment,
   mergeClipTimes,
   resolveExerciseVideoSegment,
+  validateClipPair,
 } from "../src/library/video-segment";
 
 describe("resolveExerciseVideoSegment", () => {
@@ -71,5 +73,25 @@ describe("resolveExerciseVideoSegment", () => {
     const result = resolveExerciseVideoSegment(undefined, undefined, duration);
     expect(result?.usesFullVideo).toBe(true);
     expect(result?.spanS).toBe(60);
+  });
+});
+
+describe("validateClipPair", () => {
+  it("allows partial pairs", () => {
+    expect(validateClipPair(5, undefined)).toEqual({ ok: true });
+    expect(validateClipPair(undefined, 10)).toEqual({ ok: true });
+  });
+
+  it("rejects end before or equal to start", () => {
+    expect(validateClipPair(10, 10)).toEqual({ ok: false, error: "end-before-start" });
+    expect(validateClipPair(12, 8)).toEqual({ ok: false, error: "end-before-start" });
+    expect(clipPairValidationMessage("end-before-start")).toContain("after start");
+  });
+
+  it("rejects segments shorter than one second", () => {
+    expect(validateClipPair(3, 3.5)).toEqual({ ok: false, error: "too-short" });
+    expect(validateClipPair(1, 1.99)).toEqual({ ok: false, error: "too-short" });
+    expect(validateClipPair(1, 2)).toEqual({ ok: true });
+    expect(clipPairValidationMessage("too-short")).toContain("1 second");
   });
 });

@@ -86,4 +86,29 @@ describe("library routine video preview", () => {
     expect(mounted?.loop).toBe(false);
     preview.destroy();
   });
+
+  it("uses full reel without autoplay when editing clip bounds", async () => {
+    const proto = HTMLVideoElement.prototype;
+    vi.spyOn(proto, "load").mockImplementation(function (this: HTMLVideoElement) {
+      this.dispatchEvent(new Event("loadeddata"));
+    });
+    vi.spyOn(proto, "play").mockResolvedValue(undefined);
+
+    const preview = await mountLibraryVideoPreview({
+      root,
+      relativePath: "media/reels/fixture_one.mp4",
+      ariaLabel: "Edit clip",
+      segment: { startS: 5, endS: 10, spanS: 5, usesFullVideo: false },
+      editingClip: true,
+      autoplay: false,
+      initialTimeS: 7,
+    });
+
+    const video = root.querySelector("video");
+    expect(video?.getAttribute("src")).toBe("/media/reels/fixture_one.mp4");
+    expect(video?.paused).toBe(true);
+    expect(video?.currentTime).toBe(7);
+    expect(vi.mocked(proto.play)).not.toHaveBeenCalled();
+    preview.destroy();
+  });
 });

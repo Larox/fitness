@@ -74,7 +74,7 @@ export function renderLibraryVideoSection(input: LibraryVideoSectionInput): stri
       : "";
   const controls = input.clipControlsHtml ?? "";
   return `<div class="sect"><h2>Routine preview</h2></div>
-    <div class="group">
+  <div class="group library-preview-shell">
       <div id="library-video-mount"></div>
       ${controls}
       ${source}

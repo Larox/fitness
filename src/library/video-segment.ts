@@ -1,3 +1,7 @@
+export const CLIP_MIN_SPAN_S = 1;
+
+export type ClipPairValidationError = "end-before-start" | "too-short";
+
 export interface ClipTimes {
   startS?: number;
   endS?: number;
@@ -16,6 +20,40 @@ function finiteNonNegative(value: unknown): number | undefined {
     return undefined;
   }
   return value;
+}
+
+/**
+ * When both endpoints are known, reject end ≤ start or span shorter than `minSpanS`.
+ * Partial pairs (only start or only end) pass until the other is set.
+ */
+export function validateClipPair(
+  startS: number | undefined,
+  endS: number | undefined,
+  minSpanS: number = CLIP_MIN_SPAN_S,
+): { ok: true } | { ok: false; error: ClipPairValidationError } {
+  if (startS === undefined || endS === undefined) {
+    return { ok: true };
+  }
+  if (endS <= startS) {
+    return { ok: false, error: "end-before-start" };
+  }
+  if (endS - startS < minSpanS) {
+    return { ok: false, error: "too-short" };
+  }
+  return { ok: true };
+}
+
+export function clipPairValidationMessage(error: ClipPairValidationError, minSpanS = CLIP_MIN_SPAN_S): string {
+  switch (error) {
+    case "end-before-start":
+      return "End must be after start.";
+    case "too-short":
+      return `Pick at least ${minSpanS} second between start and end.`;
+    default: {
+      const _exhaustive: never = error;
+      return _exhaustive;
+    }
+  }
 }
 
 /** Merge device override on top of library defaults (override wins per field). */

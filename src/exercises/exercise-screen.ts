@@ -18,8 +18,14 @@ import {
   clearRoutineLibraryPose,
   getRoutineLibraryPose,
 } from "../library/routine-pose";
-import { resolveExerciseVideoSegment } from "../library/video-segment";
-import type { ResolvedVideoSegment } from "../library/video-segment";
+import {
+  clipPairValidationMessage,
+  mergeClipTimes,
+  resolveExerciseVideoSegment,
+  validateClipPair,
+} from "../library/video-segment";
+import type { ClipTimes, ResolvedVideoSegment } from "../library/video-segment";
+import type { ExerciseLibraryClipOverride } from "../media/types";
 import type { NormalizedExercise, NormalizedRoutine } from "../library/types";
 import {
   LibraryVideoPreview,
@@ -156,6 +162,13 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   let libraryVideoFullDurationS: number | null = null;
   let libraryExerciseSegment: ResolvedVideoSegment | null = null;
   let libraryClipHasOverride = false;
+  let libraryClipEditPaused = true;
+  let libraryClipEditTimeS = 0;
+  let libraryClipFeedback: string | null = null;
+  let libraryClipValidationError: string | null = null;
+  let libraryClipVideoReady = false;
+  let libraryClipFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
+  let libraryClipScrubListener: (() => void) | null = null;
   let libraryRoutineAnimView: "anim" | "clip" = "anim";
   let routineUnfinishedAnim = false;
 
@@ -272,6 +285,154 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     );
   }
 
+  function deviceOverrideToClipTimes(
+    override: ExerciseLibraryClipOverride | null | undefined,
+  ): ClipTimes | undefined {
+    if (!override) {
+      return undefined;
+    }
+    return { startS: override.clipStartS, endS: override.clipEndS };
+  }
+
+  function resetLibraryClipEditUi(): void {
+    libraryClipEditPaused = true;
+    libraryClipEditTimeS = libraryExerciseSegment?.startS ?? 0;
+    libraryClipFeedback = null;
+    libraryClipValidationError = null;
+    libraryClipVideoReady = false;
+    if (libraryClipFeedbackTimer) {
+      clearTimeout(libraryClipFeedbackTimer);
+      libraryClipFeedbackTimer = null;
+    }
+  }
+
+  function libraryClipControlsRenderInput(): Parameters<typeof renderLibraryClipControls>[0] | null {
+    if (!editingLibrary) {
+      return null;
+    }
+    const reducedMotion =
+      typeof matchMedia === "function" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches;
+    return {
+      segment: libraryExerciseSegment,
+      hasDeviceOverride: libraryClipHasOverride,
+      hasLibraryTimes:
+        editingLibrary.libraryClipStartS !== undefined ||
+        editingLibrary.libraryClipEndS !== undefined,
+      reducedMotion,
+      videoReady: libraryClipVideoReady,
+      scrubTimeS: libraryClipEditTimeS,
+      fullDurationS: libraryVideoFullDurationS,
+      feedback: libraryClipFeedback,
+      validationError: libraryClipValidationError,
+      paused: libraryClipEditPaused,
+    };
+  }
+
+  function refreshClipControlsMarkup(): void {
+    const input = libraryClipControlsRenderInput();
+    if (!input) {
+      return;
+    }
+    const html = renderLibraryClipControls(input);
+    const existing = root.querySelector(".clip-controls");
+    if (existing) {
+      existing.outerHTML = html;
+    }
+  }
+
+  function setClipFeedback(message: string): void {
+    if (libraryClipFeedbackTimer) {
+      clearTimeout(libraryClipFeedbackTimer);
+    }
+    libraryClipFeedback = message;
+    refreshClipControlsMarkup();
+    libraryClipFeedbackTimer = setTimeout(() => {
+      libraryClipFeedback = null;
+      libraryClipFeedbackTimer = null;
+      refreshClipControlsMarkup();
+    }, 2500);
+  }
+
+  function wireLibraryClipScrubSync(video: HTMLVideoElement): void {
+    if (libraryClipScrubListener) {
+      video.removeEventListener("timeupdate", libraryClipScrubListener);
+    }
+    libraryClipScrubListener = () => {
+      libraryClipEditTimeS = video.currentTime;
+      const scrub = root.querySelector<HTMLInputElement>(".clip-scrub");
+      if (scrub && document.activeElement !== scrub) {
+        scrub.value = String(video.currentTime);
+      }
+      const timeEl = root.querySelector(".clip-scrub-time");
+      if (timeEl) {
+        timeEl.textContent = formatDurationMmSs(video.currentTime);
+      }
+    };
+    video.addEventListener("timeupdate", libraryClipScrubListener);
+  }
+
+  async function handleLibraryClipAction(act: string): Promise<void> {
+    if (!editingLibrary) {
+      return;
+    }
+    const video = libraryVideoPreview?.getVideo();
+    const wasPaused = video?.paused ?? libraryClipEditPaused;
+    const timeS = video?.currentTime ?? libraryClipEditTimeS;
+
+    if (act === "clip-reset") {
+      libraryClipValidationError = null;
+      libraryClipFeedback = null;
+      await clearExerciseClipOverride(editingLibrary.id);
+      setClipFeedback("Reset to library times");
+    } else {
+      if (!video) {
+        return;
+      }
+      video.pause();
+      const override = await getExerciseClipOverride(editingLibrary.id);
+      const patch: ExerciseLibraryClipOverride =
+        act === "clip-set-start" ? { clipStartS: video.currentTime } : { clipEndS: video.currentTime };
+      const merged = mergeClipTimes(
+        {
+          startS: editingLibrary.libraryClipStartS,
+          endS: editingLibrary.libraryClipEndS,
+        },
+        {
+          ...deviceOverrideToClipTimes(override),
+          ...(patch.clipStartS !== undefined ? { startS: patch.clipStartS } : {}),
+          ...(patch.clipEndS !== undefined ? { endS: patch.clipEndS } : {}),
+        },
+      );
+      const validation = validateClipPair(merged.startS, merged.endS);
+      if (!validation.ok) {
+        libraryClipValidationError = clipPairValidationMessage(validation.error);
+        libraryClipFeedback = null;
+        refreshClipControlsMarkup();
+        return;
+      }
+      libraryClipValidationError = null;
+      await saveExerciseClipOverride(editingLibrary.id, patch);
+      const label =
+        act === "clip-set-start"
+          ? `Start set to ${formatDurationMmSs(video.currentTime)}`
+          : `End set to ${formatDurationMmSs(video.currentTime)}`;
+      setClipFeedback(label);
+    }
+
+    const segment = await recomputeLibraryExerciseSegment(editingLibrary);
+    libraryVideoDurationS = segment?.spanS ?? libraryVideoFullDurationS;
+    libraryClipEditPaused = wasPaused;
+    libraryClipEditTimeS = timeS;
+    refreshClipControlsMarkup();
+    if (video) {
+      video.currentTime = timeS;
+      if (wasPaused) {
+        video.pause();
+      }
+    }
+  }
+
   async function recomputeLibraryExerciseSegment(
     exercise: NormalizedExercise,
   ): Promise<ResolvedVideoSegment | null> {
@@ -347,9 +508,16 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     const activePose = libraryExercise ? exerciseLibraryPoseMeta : routineLibraryPoseMeta;
     const clipControls =
       libraryExercise && libraryVideoFullDurationS !== null
-        ? renderLibraryClipControls({
+        ? renderLibraryClipControls(libraryClipControlsRenderInput() ?? {
             segment: libraryExerciseSegment,
             hasDeviceOverride: libraryClipHasOverride,
+            hasLibraryTimes:
+              libraryExercise.libraryClipStartS !== undefined ||
+              libraryExercise.libraryClipEndS !== undefined,
+            videoReady: libraryClipVideoReady,
+            scrubTimeS: libraryClipEditTimeS,
+            fullDurationS: libraryVideoFullDurationS,
+            paused: libraryClipEditPaused,
           })
         : "";
     return renderLibraryVideoSection({
@@ -485,18 +653,33 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       }
       return;
     }
-    const playbackSegment =
-      view === "library" && editingLibrary ? libraryExerciseSegment : null;
+    const editingClipBounds = view === "library" && Boolean(editingLibrary);
+    const playbackSegment = editingClipBounds ? null : null;
     const reducedMotion =
       typeof matchMedia === "function" &&
       matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (editingClipBounds) {
+      libraryClipVideoReady = false;
+      refreshClipControlsMarkup();
+    }
     libraryVideoPreview = await mountLibraryVideoPreview({
       root: mount,
       relativePath: routine.video,
       ariaLabel: `Routine preview for ${previewName}`,
       segment: playbackSegment,
       reducedMotion,
+      editingClip: editingClipBounds,
+      autoplay: editingClipBounds ? !libraryClipEditPaused : true,
+      initialTimeS: editingClipBounds ? libraryClipEditTimeS : undefined,
     });
+    if (editingClipBounds) {
+      libraryClipVideoReady = libraryVideoPreview.isPlaying();
+      refreshClipControlsMarkup();
+      const mountedVideo = libraryVideoPreview.getVideo();
+      if (mountedVideo) {
+        wireLibraryClipScrubSync(mountedVideo);
+      }
+    }
     if (!libraryVideoPreview.isPlaying()) {
       libraryVideoDurationS = null;
       const section = mount.closest(".group");
@@ -1012,6 +1195,25 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
 
   function handleInput(event: Event): void {
     const target = event.target;
+    if (target instanceof HTMLInputElement && target.dataset.act === "clip-scrub") {
+      const video = libraryVideoPreview?.getVideo();
+      if (!video) {
+        return;
+      }
+      const t = Number(target.value);
+      if (!Number.isFinite(t)) {
+        return;
+      }
+      video.pause();
+      libraryClipEditPaused = true;
+      video.currentTime = t;
+      libraryClipEditTimeS = t;
+      const timeEl = root.querySelector(".clip-scrub-time");
+      if (timeEl) {
+        timeEl.textContent = formatDurationMmSs(t);
+      }
+      return;
+    }
     if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
       return;
     }
@@ -1118,6 +1320,8 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
             await openExerciseMedia(value);
             if (routine) {
               await loadRoutineLibraryVideoState(routine);
+              resetLibraryClipEditUi();
+              libraryClipEditTimeS = libraryExerciseSegment?.startS ?? 0;
             }
             render();
           })();
@@ -1192,27 +1396,27 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       case "clip-set-end":
       case "clip-reset":
         if (view === "library" && editingLibrary) {
-          void (async () => {
-            if (act === "clip-reset") {
-              await clearExerciseClipOverride(editingLibrary.id);
-            } else {
-              const video = libraryVideoPreview?.getVideo();
-              if (!video) {
-                return;
-              }
-              const patch =
-                act === "clip-set-start"
-                  ? { clipStartS: video.currentTime }
-                  : { clipEndS: video.currentTime };
-              await saveExerciseClipOverride(editingLibrary.id, patch);
-            }
-            const segment = await recomputeLibraryExerciseSegment(editingLibrary);
-            libraryVideoDurationS = segment?.spanS ?? libraryVideoFullDurationS;
-            render();
-            afterShellRender();
-          })();
+          void handleLibraryClipAction(act);
         }
         return;
+      case "clip-pause": {
+        const video = libraryVideoPreview?.getVideo();
+        if (video) {
+          video.pause();
+          libraryClipEditPaused = true;
+          refreshClipControlsMarkup();
+        }
+        return;
+      }
+      case "clip-play": {
+        const video = libraryVideoPreview?.getVideo();
+        if (video) {
+          void video.play().catch(() => undefined);
+          libraryClipEditPaused = false;
+          refreshClipControlsMarkup();
+        }
+        return;
+      }
       case "pose-start":
       case "pose-retry":
         startPoseForCurrentContext();
@@ -1515,6 +1719,9 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
 
   return {
     destroy: () => {
+      if (libraryClipFeedbackTimer) {
+        clearTimeout(libraryClipFeedbackTimer);
+      }
       libraryVideoPreview?.destroy();
       figurePlayer?.destroy();
       unsubPose();

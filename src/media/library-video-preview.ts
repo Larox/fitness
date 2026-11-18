@@ -11,6 +11,10 @@ export interface MountLibraryVideoPreviewOptions {
   belowHtml?: string;
   segment?: ResolvedVideoSegment | null;
   reducedMotion?: boolean;
+  /** Full-reel scrub while editing clip bounds (no fragment, no segment loop). */
+  editingClip?: boolean;
+  autoplay?: boolean;
+  initialTimeS?: number;
 }
 
 export interface LibraryVideoPreviewHandle {
@@ -35,15 +39,22 @@ export class LibraryVideoPreview implements LibraryVideoPreviewHandle {
       belowHtml = "",
       segment = null,
       reducedMotion = false,
+      editingClip = false,
+      autoplay = true,
+      initialTimeS,
     } = this.options;
-    const url = segment
-      ? libraryVideoUrlWithFragment(relativePath, segment)
+    const playbackSegment = editingClip ? null : segment;
+    const url = playbackSegment
+      ? libraryVideoUrlWithFragment(relativePath, playbackSegment)
       : libraryVideoUrlWithFragment(relativePath, {
           startS: 0,
           endS: 0,
           usesFullVideo: true,
         });
-    const loopAttr = segment && !segment.usesFullVideo && !reducedMotion ? "" : " loop";
+    const loopAttr =
+      editingClip || (playbackSegment && !playbackSegment.usesFullVideo && !reducedMotion)
+        ? ""
+        : " loop";
     root.innerHTML = `<div class="media-frame today-media library-routine-video" data-library-video="1">
       <video class="media-cover" playsinline muted${loopAttr} preload="metadata" aria-label="${escapeAttr(ariaLabel)}"></video>
     </div>${belowHtml}`;
@@ -73,17 +84,35 @@ export class LibraryVideoPreview implements LibraryVideoPreviewHandle {
     this.ok = true;
     video.muted = true;
     video.playsInline = true;
-    if (!segment || segment.usesFullVideo) {
-      video.loop = !reducedMotion;
+    if (editingClip) {
+      video.loop = false;
+      const seek =
+        typeof initialTimeS === "number" && Number.isFinite(initialTimeS) && initialTimeS >= 0
+          ? initialTimeS
+          : 0;
+      video.currentTime = seek;
+      if (!autoplay) {
+        video.pause();
+      }
+    } else if (!playbackSegment || playbackSegment.usesFullVideo) {
+      video.loop = !reducedMotion && !editingClip;
+      if (typeof initialTimeS === "number" && Number.isFinite(initialTimeS)) {
+        video.currentTime = initialTimeS;
+      }
     } else {
       video.loop = false;
-      this.onSegmentLoop = attachSegmentLoop(video, segment, reducedMotion);
-      video.currentTime = segment.startS;
+      this.onSegmentLoop = attachSegmentLoop(video, playbackSegment, reducedMotion);
+      video.currentTime =
+        typeof initialTimeS === "number" && Number.isFinite(initialTimeS)
+          ? initialTimeS
+          : playbackSegment.startS;
     }
-    try {
-      await video.play();
-    } catch {
-      /* autoplay may be blocked; inline frame still shows first frame */
+    if (autoplay) {
+      try {
+        await video.play();
+      } catch {
+        /* autoplay may be blocked; inline frame still shows first frame */
+      }
     }
     return true;
   }
