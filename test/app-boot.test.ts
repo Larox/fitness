@@ -48,7 +48,14 @@ describe("app boot", () => {
 
     await bootApp(root);
     expect(document.body.textContent).not.toContain("Configuration problem");
-    expect(root.textContent).toMatch(/Plan your training|Training settings/);
+    await vi.waitFor(
+      () => {
+        expect(root.className).toBe("today-shell");
+        expect(root.textContent).toMatch(/TODAY|No plan yet|Rest day|Tick off/);
+      },
+      { timeout: 2000 },
+    );
+    expect(document.getElementById("today-bar")).not.toBeNull();
     vi.unstubAllGlobals();
   });
 });

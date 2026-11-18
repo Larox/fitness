@@ -49,7 +49,7 @@ describe("This week list after setup save", () => {
     });
   });
 
-  it("opens Today after start training", async () => {
+  it("opens Today on first boot with a built week plan", async () => {
     const configJson = fixture("public/config.example.json");
     const libraryJson = fixture("public/data/sample-library.json");
     const overlayJson = fixture("public/data/overlay.json");
@@ -72,16 +72,14 @@ describe("This week list after setup save", () => {
     );
 
     await bootApp(root);
-    const save = document.querySelector<HTMLButtonElement>('[data-act="save"]');
-    expect(save).toBeTruthy();
-    save!.click();
     await vi.waitFor(
       () => {
         expect(root.className).toBe("today-shell");
       },
       { timeout: 2000 },
     );
-    expect(root.textContent).toMatch(/TODAY|No plan yet|Rest is part|Tick off/);
+    expect(root.textContent).toMatch(/TODAY|No plan yet|Rest day|Tick off/);
+    expect(storage.load()?.weekPlan).toBeDefined();
     vi.unstubAllGlobals();
   });
 });
