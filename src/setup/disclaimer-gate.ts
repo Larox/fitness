@@ -31,6 +31,7 @@ export function mountDisclaimerGate(options: MountDisclaimerGateOptions): {
   document.body.classList.add("setup-locked");
   const app = document.getElementById("app");
   app?.setAttribute("inert", "");
+  document.getElementById("today-bar")?.setAttribute("inert", "");
 
   const sheet = layer.querySelector<HTMLElement>(".sheet");
   sheet?.focus();
@@ -50,6 +51,7 @@ export function mountDisclaimerGate(options: MountDisclaimerGateOptions): {
       layer.remove();
       document.body.classList.remove("setup-locked");
       app?.removeAttribute("inert");
+      document.getElementById("today-bar")?.removeAttribute("inert");
     },
   };
 }

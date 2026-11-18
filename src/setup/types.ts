@@ -42,6 +42,8 @@ export interface PersistedAppState {
   completedSessions?: Record<string, SessionCompletionSummary>;
   /** Last kettlebell choice per exercise id (device). */
   exerciseBellKg?: Record<string, number | null>;
+  /** Active train-early session id per viewer week (weekStartKey of the day training started). */
+  trainEarlySessionByWeek?: Record<string, string>;
 }
 
 export interface SettingsChangeSummary {
