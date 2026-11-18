@@ -113,6 +113,26 @@ describe("routine animation QA (#32)", () => {
     expect(target).toEqual({ kind: "exercise-clip", meta: clip });
   });
 
+  it("targets the library video segment on a library exercise without user media", () => {
+    const target = resolvePoseStartTarget({
+      view: "library",
+      display: null,
+      routineVideo: "media/reels/a.mp4",
+      routineId: "routine_a",
+      libraryVideoDurationS: 10,
+      libraryExerciseId: "lex_seg",
+      segmentSpanS: 10,
+      segmentStartS: 4,
+    });
+    expect(target).toEqual({
+      kind: "exercise-library-video",
+      exerciseId: "lex_seg",
+      videoRelativePath: "media/reels/a.mp4",
+      durationS: 10,
+      segmentStartS: 4,
+    });
+  });
+
   it("clears stale exercise media when opening a routine", () => {
     const state = createMediaFlowState("placeholder");
     state.draft.display = clipMeta("lex_old", "med_old", true);

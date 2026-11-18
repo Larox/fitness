@@ -1,5 +1,9 @@
 import { fetchLibraryVideoBlob } from "../library/library-video-fetch";
 import {
+  exerciseLibraryMediaId,
+  saveExerciseLibraryPose,
+} from "../library/exercise-library-pose";
+import {
   routineLibraryMediaId,
   saveRoutineLibraryPose,
 } from "../library/routine-pose";
@@ -266,6 +270,7 @@ export async function startRoutineLibraryPoseJob(
   videoRelativePath: string,
   durationS: number,
   modelCached: boolean,
+  segmentStartS = 0,
 ): Promise<void> {
   abort?.abort();
   abort = new AbortController();
@@ -361,6 +366,7 @@ export async function startRoutineLibraryPoseJob(
           }
         },
         signal,
+        segmentStartS,
       );
       if (signal.aborted) return;
       const result = processLandmarkFrames(landmarks, durationS, manifest.version);
@@ -401,6 +407,155 @@ export async function startRoutineLibraryPoseJob(
       return;
     }
     setJob({ phase: "failed", exerciseId: routineId, mediaId, modelManifest: manifest });
+  } finally {
+    const st = await loadMediaSettings();
+    await saveMediaSettings({ ...st, poseJob: null });
+  }
+}
+
+export async function startExerciseLibraryPoseJob(
+  config: PoseJobConfig,
+  exerciseId: string,
+  videoRelativePath: string,
+  durationS: number,
+  segmentStartS: number,
+  modelCached: boolean,
+): Promise<void> {
+  abort?.abort();
+  abort = new AbortController();
+  const signal = abort.signal;
+  const base = config.poseModelBaseUrl.replace(/\/$/, "");
+  const mediaId = exerciseLibraryMediaId(exerciseId);
+  let manifest = await loadPoseModelManifest(config);
+  if (!manifest && modelCached) {
+    const bytes = await poseModelCachedBytes();
+    manifest = {
+      version: "pose_landmarker_lite",
+      totalBytes: bytes,
+      files: [],
+    };
+  }
+  if (!manifest) {
+    setJob({ phase: "offline", exerciseId, mediaId });
+    return;
+  }
+  const modelReady =
+    modelCached && manifest.files.length > 0
+      ? await isPoseModelCached(manifest, base)
+      : false;
+  const settings = await loadMediaSettings();
+  await saveMediaSettings({
+    ...settings,
+    poseJob: { exerciseId, mediaId, startedAt: new Date().toISOString() },
+  });
+
+  setJob({
+    phase: modelReady ? "processing" : "downloading",
+    exerciseId,
+    mediaId,
+    downloadTotal: manifest.totalBytes,
+    downloadLoaded: 0,
+    modelManifest: manifest,
+  });
+
+  try {
+    if (!modelReady) {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        setJob({ ...current!, phase: "offline", modelManifest: manifest });
+        return;
+      }
+      const { usage, quota } = await estimateDeviceStorage();
+      if (!hasStorageForNewFile(usage, quota, manifest.totalBytes * 1.1)) {
+        setJob({ ...current!, phase: "offline", modelManifest: manifest });
+        return;
+      }
+      await downloadPoseModelFiles(
+        base,
+        manifest,
+        (loaded, total) => {
+          if (current) {
+            setJob({ ...current, downloadLoaded: loaded, downloadTotal: total });
+          }
+        },
+        signal,
+      );
+      const st = await loadMediaSettings();
+      await saveMediaSettings({ ...st, poseModelReady: true, poseJob: st.poseJob ?? null });
+    }
+
+    if (signal.aborted) return;
+    setJob({
+      phase: "processing",
+      exerciseId,
+      mediaId,
+      processFrame: 0,
+      processTotal: Math.round(durationS * 15),
+      modelManifest: manifest,
+    });
+
+    const clipBlob = await fetchLibraryVideoBlob(videoRelativePath);
+    if (!clipBlob) {
+      setJob({ phase: "failed", exerciseId, mediaId, modelManifest: manifest });
+      return;
+    }
+    const resolved = await resolvePoseModelUrls(base);
+    const detector = await createMediapipePoseDetector({
+      wasmBaseUrl: resolved.wasmBaseUrl,
+      modelUrl: resolved.modelUrl,
+      revoke: resolved.revoke,
+    });
+    try {
+      const landmarks = await sampleClipLandmarks(
+        clipBlob,
+        durationS,
+        detector,
+        (frame, total) => {
+          if (current?.phase === "processing") {
+            setJob({ ...current, processFrame: frame, processTotal: total });
+          }
+        },
+        signal,
+        segmentStartS,
+      );
+      if (signal.aborted) return;
+      const result = processLandmarkFrames(landmarks, durationS, manifest.version);
+      if (!result.ok) {
+        setJob({
+          phase: result.reason === "no-person" ? "failed-noperson" : "failed",
+          exerciseId,
+          mediaId,
+          modelManifest: manifest,
+        });
+        return;
+      }
+      const poseFields = {
+        frames: result.frames,
+        fps: 15,
+        keyFrame: result.keyFrame,
+        createdAt: new Date().toISOString(),
+        modelVersion: manifest.version,
+      };
+      const pose = await saveExerciseLibraryPose(exerciseId, result.blob, poseFields, durationS);
+      setJob({
+        phase: "ready",
+        exerciseId,
+        mediaId,
+        modelManifest: manifest,
+        pendingPose: pose,
+      });
+    } finally {
+      detector.close();
+    }
+  } catch (err) {
+    if (signal.aborted) {
+      setJob({ phase: "offer", exerciseId, mediaId, modelManifest: manifest });
+      return;
+    }
+    if (err instanceof Error && err.message === "pose-model-offline") {
+      setJob({ phase: "offline", exerciseId, mediaId, modelManifest: manifest });
+      return;
+    }
+    setJob({ phase: "failed", exerciseId, mediaId, modelManifest: manifest });
   } finally {
     const st = await loadMediaSettings();
     await saveMediaSettings({ ...st, poseJob: null });

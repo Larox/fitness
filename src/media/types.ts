@@ -51,6 +51,11 @@ export interface RoutineLibraryPoseEntry {
   durationS: number;
 }
 
+export interface ExerciseLibraryClipOverride {
+  clipStartS?: number;
+  clipEndS?: number;
+}
+
 export interface MediaStorageSettings {
   persistGranted?: boolean;
   persistRequested?: boolean;
@@ -61,6 +66,10 @@ export interface MediaStorageSettings {
   unfinishedAnim?: Record<string, boolean>;
   /** Stick-figure animation generated from a routine's library video. */
   routineLibraryPose?: Record<string, RoutineLibraryPoseEntry>;
+  /** Per-exercise clip boundaries overriding library `clip_*_s` times. */
+  exerciseLibraryClipOverride?: Record<string, ExerciseLibraryClipOverride>;
+  /** Stick-figure animation from a library exercise's video segment. */
+  exerciseLibraryPose?: Record<string, RoutineLibraryPoseEntry>;
 }
 
 export interface MediaUsageSummary {

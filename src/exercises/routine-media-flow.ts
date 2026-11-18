@@ -4,7 +4,14 @@ import { revokeMediaPosterUrl, type MediaFlowState } from "./exercise-media-flow
 
 export type PoseStartTarget =
   | { kind: "exercise-clip"; meta: ExerciseMediaMeta }
-  | { kind: "routine"; routineId: string; durationS: number }
+  | { kind: "routine"; routineId: string; durationS: number; segmentStartS?: number }
+  | {
+      kind: "exercise-library-video";
+      exerciseId: string;
+      videoRelativePath: string;
+      durationS: number;
+      segmentStartS: number;
+    }
   | { kind: "none" };
 
 /** Decide whether Make animation targets the routine library video or an exercise clip. */
@@ -14,8 +21,20 @@ export function resolvePoseStartTarget(input: {
   routineVideo?: string;
   routineId?: string;
   libraryVideoDurationS: number | null;
+  libraryExerciseId?: string;
+  segmentSpanS?: number | null;
+  segmentStartS?: number;
 }): PoseStartTarget {
-  const { view, display, routineVideo, routineId, libraryVideoDurationS } = input;
+  const {
+    view,
+    display,
+    routineVideo,
+    routineId,
+    libraryVideoDurationS,
+    libraryExerciseId,
+    segmentSpanS,
+    segmentStartS = 0,
+  } = input;
   if (
     view === "routine" &&
     routineVideo &&
@@ -30,10 +49,17 @@ export function resolvePoseStartTarget(input: {
   if (
     view === "library" &&
     routineVideo &&
-    routineId &&
-    libraryVideoDurationS != null
+    libraryExerciseId &&
+    segmentSpanS != null &&
+    segmentSpanS > 0
   ) {
-    return { kind: "routine", routineId, durationS: libraryVideoDurationS };
+    return {
+      kind: "exercise-library-video",
+      exerciseId: libraryExerciseId,
+      videoRelativePath: routineVideo,
+      durationS: segmentSpanS,
+      segmentStartS,
+    };
   }
   return { kind: "none" };
 }

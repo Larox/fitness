@@ -4,9 +4,22 @@ import { renderLibraryVideoSection } from "../library/library-video-section";
 import { shouldShowLibraryRoutineVideo } from "../library/library-video-visibility";
 import { probeLibraryVideoDuration } from "../library/library-video-fetch";
 import {
+  clearExerciseClipOverride,
+  getExerciseClipOverride,
+  hasExerciseClipOverride,
+  saveExerciseClipOverride,
+} from "../library/exercise-clip-store";
+import {
+  clearExerciseLibraryPose,
+  getExerciseLibraryPose,
+} from "../library/exercise-library-pose";
+import { renderLibraryClipControls } from "../library/library-video-clip-controls";
+import {
   clearRoutineLibraryPose,
   getRoutineLibraryPose,
 } from "../library/routine-pose";
+import { resolveExerciseVideoSegment } from "../library/video-segment";
+import type { ResolvedVideoSegment } from "../library/video-segment";
 import type { NormalizedExercise, NormalizedRoutine } from "../library/types";
 import {
   LibraryVideoPreview,
@@ -77,6 +90,7 @@ import {
   cancelPoseJob,
   loadPoseModelManifest,
   startPoseJob,
+  startExerciseLibraryPoseJob,
   startRoutineLibraryPoseJob,
   subscribePoseJob,
   resumePoseJobMarker,
@@ -137,7 +151,11 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
   let editingRoutine: NormalizedRoutine | null = null;
   let libraryVideoPreview: LibraryVideoPreview | null = null;
   let routineLibraryPoseMeta: PoseMeta | undefined;
+  let exerciseLibraryPoseMeta: PoseMeta | undefined;
   let libraryVideoDurationS: number | null = null;
+  let libraryVideoFullDurationS: number | null = null;
+  let libraryExerciseSegment: ResolvedVideoSegment | null = null;
+  let libraryClipHasOverride = false;
   let libraryRoutineAnimView: "anim" | "clip" = "anim";
   let routineUnfinishedAnim = false;
 
@@ -157,6 +175,12 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       if (job?.phase === "ready") {
         if (job.pendingPose && findRoutine(job.exerciseId)) {
           routineLibraryPoseMeta = job.pendingPose;
+          exerciseLibraryPoseMeta = undefined;
+          mediaState.unfinishedAnim = false;
+          await clearUnfinishedFlag(job.exerciseId);
+        } else if (job.pendingPose && editingLibrary?.id === job.exerciseId) {
+          exerciseLibraryPoseMeta = job.pendingPose;
+          routineLibraryPoseMeta = undefined;
           mediaState.unfinishedAnim = false;
           await clearUnfinishedFlag(job.exerciseId);
         } else if (job.pendingPose && mediaState.draft.display?.id === job.mediaId) {
@@ -248,21 +272,69 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     );
   }
 
+  async function recomputeLibraryExerciseSegment(
+    exercise: NormalizedExercise,
+  ): Promise<ResolvedVideoSegment | null> {
+    const override = await getExerciseClipOverride(exercise.id);
+    libraryClipHasOverride = hasExerciseClipOverride(override);
+    const resolved = resolveExerciseVideoSegment(
+      {
+        startS: exercise.libraryClipStartS,
+        endS: exercise.libraryClipEndS,
+      },
+      override
+        ? { startS: override.clipStartS, endS: override.clipEndS }
+        : undefined,
+      libraryVideoFullDurationS,
+    );
+    libraryExerciseSegment = resolved;
+    return resolved;
+  }
+
   async function loadRoutineLibraryVideoState(routine: NormalizedRoutine): Promise<void> {
     libraryVideoDurationS = null;
+    libraryVideoFullDurationS = null;
+    libraryExerciseSegment = null;
     routineLibraryPoseMeta = undefined;
+    exerciseLibraryPoseMeta = undefined;
+    libraryClipHasOverride = false;
     const settings = await loadMediaSettings();
-    routineUnfinishedAnim = Boolean(settings.unfinishedAnim?.[routine.id]);
+    const unfinishedId =
+      view === "library" && editingLibrary ? editingLibrary.id : routine.id;
+    routineUnfinishedAnim = Boolean(settings.unfinishedAnim?.[unfinishedId]);
     if (!routine.video) {
       return;
     }
-    const stored = await getRoutineLibraryPose(routine.id);
-    if (stored) {
-      routineLibraryPoseMeta = stored.pose;
-      libraryVideoDurationS = stored.durationS;
+    if (view === "library" && editingLibrary) {
+      const storedExercise = await getExerciseLibraryPose(editingLibrary.id);
+      if (storedExercise) {
+        exerciseLibraryPoseMeta = storedExercise.pose;
+        libraryVideoDurationS = storedExercise.durationS;
+      }
+    } else if (view === "routine") {
+      const stored = await getRoutineLibraryPose(routine.id);
+      if (stored) {
+        routineLibraryPoseMeta = stored.pose;
+        libraryVideoDurationS = stored.durationS;
+      }
+    }
+    if (libraryVideoFullDurationS === null) {
+      libraryVideoFullDurationS = await probeLibraryVideoDuration(routine.video);
+    }
+    if (view === "library" && editingLibrary) {
+      const segment = await recomputeLibraryExerciseSegment(editingLibrary);
+      if (libraryVideoDurationS === null) {
+        libraryVideoDurationS = segment?.spanS ?? libraryVideoFullDurationS;
+      }
       return;
     }
-    libraryVideoDurationS = await probeLibraryVideoDuration(routine.video);
+    if (libraryVideoDurationS === null) {
+      libraryVideoDurationS = libraryVideoFullDurationS;
+    }
+    libraryExerciseSegment =
+      libraryVideoFullDurationS !== null
+        ? resolveExerciseVideoSegment(undefined, undefined, libraryVideoFullDurationS)
+        : null;
   }
 
   function libraryVideoSectionHtml(): string {
@@ -270,18 +342,31 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     if (!routine || !showLibraryVideoForActiveRoutine()) {
       return "";
     }
+    const libraryExercise = view === "library" ? editingLibrary : null;
+    const poseOwnerId = libraryExercise?.id ?? routine.id;
+    const activePose = libraryExercise ? exerciseLibraryPoseMeta : routineLibraryPoseMeta;
+    const clipControls =
+      libraryExercise && libraryVideoFullDurationS !== null
+        ? renderLibraryClipControls({
+            segment: libraryExerciseSegment,
+            hasDeviceOverride: libraryClipHasOverride,
+          })
+        : "";
     return renderLibraryVideoSection({
       routine,
       durationS: libraryVideoDurationS,
-      pose: routineLibraryPoseMeta,
-      job:
-        mediaState.poseJob?.exerciseId === routine.id ? mediaState.poseJob : null,
+      pose: activePose,
+      job: mediaState.poseJob?.exerciseId === poseOwnerId ? mediaState.poseJob : null,
       modelOnDevice: mediaState.modelOnDevice,
       modelCached: mediaState.modelOnDevice,
       manifestLabel: mediaState.manifestLabel,
       unfinished: routineUnfinishedAnim,
       formAnimView: libraryRoutineAnimView,
       poseRemovedDraft: mediaState.poseRemoveDraft,
+      previewSubjectName: libraryExercise?.name ?? routine.title,
+      poseOwnerId,
+      exerciseLibraryPose: Boolean(libraryExercise),
+      clipControlsHtml: clipControls,
     });
   }
 
@@ -300,8 +385,13 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     if (!routine) {
       return;
     }
-    await clearRoutineLibraryPose(routine.id);
-    routineLibraryPoseMeta = undefined;
+    if (view === "library" && editingLibrary) {
+      await clearExerciseLibraryPose(editingLibrary.id);
+      exerciseLibraryPoseMeta = undefined;
+    } else {
+      await clearRoutineLibraryPose(routine.id);
+      routineLibraryPoseMeta = undefined;
+    }
     libraryRoutineAnimView = "anim";
     mediaState.poseRemoveDraft = false;
     routineUnfinishedAnim = false;
@@ -317,6 +407,9 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       routineVideo: routine?.video,
       routineId: routine?.id,
       libraryVideoDurationS,
+      libraryExerciseId: editingLibrary?.id,
+      segmentSpanS: libraryExerciseSegment?.spanS ?? null,
+      segmentStartS: libraryExerciseSegment?.startS ?? 0,
     });
     if (target.kind === "exercise-clip") {
       void startPoseJob(
@@ -333,6 +426,17 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
         target.routineId,
         routine.video,
         target.durationS,
+        mediaState.modelOnDevice,
+        target.segmentStartS ?? 0,
+      );
+    }
+    if (target.kind === "exercise-library-video") {
+      void startExerciseLibraryPoseJob(
+        { poseModelBaseUrl: poseBaseUrl },
+        target.exerciseId,
+        target.videoRelativePath,
+        target.durationS,
+        target.segmentStartS,
         mediaState.modelOnDevice,
       );
     }
@@ -354,11 +458,17 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
     ) {
       return;
     }
-    if (libraryRoutineAnimView === "anim" && routineLibraryPoseMeta) {
+    const activePose =
+      view === "library" && editingLibrary
+        ? exerciseLibraryPoseMeta
+        : routineLibraryPoseMeta;
+    const previewName =
+      view === "library" && editingLibrary ? editingLibrary.name : routine.title;
+    if (libraryRoutineAnimView === "anim" && activePose) {
       mount.innerHTML = "";
       const canvas = root.querySelector<HTMLCanvasElement>("[data-role=pose-canvas]");
       if (canvas) {
-        const blob = await readMediaBlob(routineLibraryPoseMeta.key);
+        const blob = await readMediaBlob(activePose.key);
         if (blob) {
           const reduced =
             typeof matchMedia === "function" &&
@@ -366,7 +476,7 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
           figurePlayer = new FigurePlayer({
             canvas,
             blob,
-            exerciseName: routine.title,
+            exerciseName: previewName,
             reducedMotion: reduced,
           });
           await figurePlayer.load();
@@ -375,10 +485,17 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       }
       return;
     }
+    const playbackSegment =
+      view === "library" && editingLibrary ? libraryExerciseSegment : null;
+    const reducedMotion =
+      typeof matchMedia === "function" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches;
     libraryVideoPreview = await mountLibraryVideoPreview({
       root: mount,
       relativePath: routine.video,
-      ariaLabel: `Routine preview for ${routine.title}`,
+      ariaLabel: `Routine preview for ${previewName}`,
+      segment: playbackSegment,
+      reducedMotion,
     });
     if (!libraryVideoPreview.isPlaying()) {
       libraryVideoDurationS = null;
@@ -1070,6 +1187,31 @@ export function mountExerciseFlow(options: MountExerciseFlowOptions): { destroy:
       case "media-cancel":
         cancelMediaImport(mediaState, () => refreshMediaAttachMarkup());
         explicitFocusId = "media-pick-tile";
+        return;
+      case "clip-set-start":
+      case "clip-set-end":
+      case "clip-reset":
+        if (view === "library" && editingLibrary) {
+          void (async () => {
+            if (act === "clip-reset") {
+              await clearExerciseClipOverride(editingLibrary.id);
+            } else {
+              const video = libraryVideoPreview?.getVideo();
+              if (!video) {
+                return;
+              }
+              const patch =
+                act === "clip-set-start"
+                  ? { clipStartS: video.currentTime }
+                  : { clipEndS: video.currentTime };
+              await saveExerciseClipOverride(editingLibrary.id, patch);
+            }
+            const segment = await recomputeLibraryExerciseSegment(editingLibrary);
+            libraryVideoDurationS = segment?.spanS ?? libraryVideoFullDurationS;
+            render();
+            afterShellRender();
+          })();
+        }
         return;
       case "pose-start":
       case "pose-retry":

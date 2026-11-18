@@ -51,6 +51,8 @@ export interface SnapshotExercise {
   equipment?: string | null;
   cues?: string | string[] | null;
   caution?: string;
+  clip_start_s?: number;
+  clip_end_s?: number;
 }
 
 export interface NormalizedExercise {
@@ -62,6 +64,10 @@ export interface NormalizedExercise {
   equipment: string | null;
   cues: string[];
   caution?: string;
+  /** Optional segment start in the routine preview video (seconds). */
+  libraryClipStartS?: number;
+  /** Optional segment end in the routine preview video (seconds). */
+  libraryClipEndS?: number;
   /** Per-condition moderate caution copy (user exercises); library uses caution. */
   moderateCautionsByCondition?: Record<string, string>;
   /** User exercises only: configured conditions without an explicit user risk choice. */

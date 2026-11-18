@@ -130,6 +130,10 @@ export function importLibrary(
   return { routines, exercises, skipped, errors };
 }
 
+function readClipSecond(raw: unknown): number | undefined {
+  return typeof raw === "number" && Number.isFinite(raw) ? raw : undefined;
+}
+
 function normalizeExercise(
   routineId: string,
   ex: SnapshotExercise,
@@ -156,6 +160,8 @@ function normalizeExercise(
     equipment: ex.equipment ?? null,
     cues: normalizeCues(ex.cues),
     caution: ex.caution,
+    libraryClipStartS: readClipSecond(ex.clip_start_s),
+    libraryClipEndS: readClipSecond(ex.clip_end_s),
     conditionRisks,
     overlay: overlayEntry,
   };

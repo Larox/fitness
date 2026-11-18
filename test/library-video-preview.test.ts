@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mountLibraryVideoPreview } from "../src/media/library-video-preview";
+import { attachSegmentLoop, mountLibraryVideoPreview } from "../src/media/library-video-preview";
 
 describe("library routine video preview", () => {
   let root: HTMLDivElement;
@@ -57,6 +57,33 @@ describe("library routine video preview", () => {
     expect(root.querySelector("video")).toBeNull();
     expect(root.textContent).toContain("Cues stay");
     expect(preview.isPlaying()).toBe(false);
+    preview.destroy();
+  });
+
+  it("loops within a segment via timeupdate", async () => {
+    const proto = HTMLVideoElement.prototype;
+    vi.spyOn(proto, "load").mockImplementation(function (this: HTMLVideoElement) {
+      this.dispatchEvent(new Event("loadeddata"));
+    });
+    vi.spyOn(proto, "play").mockResolvedValue(undefined);
+
+    const video = document.createElement("video");
+    const segment = { startS: 2, endS: 5, spanS: 3, usesFullVideo: false };
+    const onLoop = attachSegmentLoop(video, segment, false);
+    video.currentTime = 4.96;
+    video.dispatchEvent(new Event("timeupdate"));
+    expect(video.currentTime).toBe(2);
+    video.removeEventListener("timeupdate", onLoop);
+
+    const preview = await mountLibraryVideoPreview({
+      root,
+      relativePath: "media/reels/fixture_one.mp4",
+      ariaLabel: "Segment preview",
+      segment,
+    });
+    const mounted = root.querySelector("video");
+    expect(mounted?.getAttribute("src")).toBe("/media/reels/fixture_one.mp4#t=2,5");
+    expect(mounted?.loop).toBe(false);
     preview.destroy();
   });
 });

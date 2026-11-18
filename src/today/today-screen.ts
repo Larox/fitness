@@ -1,7 +1,15 @@
 import "../media/media.css";
 import "./today.css";
 import type { AppConfig } from "../config/types";
-import type { NormalizedExercise } from "../library/types";
+import { getExerciseClipOverride } from "../library/exercise-clip-store";
+import { probeLibraryVideoDuration } from "../library/library-video-fetch";
+import { shouldShowLibraryRoutineVideo } from "../library/library-video-visibility";
+import type { NormalizedExercise, NormalizedRoutine } from "../library/types";
+import { resolveExerciseVideoSegment } from "../library/video-segment";
+import {
+  LibraryVideoPreview,
+  mountLibraryVideoPreview,
+} from "../media/library-video-preview";
 import { renderRoutineSourceLink } from "../library/source-link";
 import { getMediaByExerciseId, loadMediaSettings } from "../media/meta-store";
 import { ExerciseMediaPreview } from "../media/preview";
@@ -60,6 +68,7 @@ export interface MountTodayScreenOptions {
   root: HTMLElement;
   exercisesById: ReadonlyMap<string, NormalizedExercise>;
   routineSourceById: ReadonlyMap<string, string | undefined>;
+  routinesById: ReadonlyMap<string, NormalizedRoutine>;
   onOpenSettings: () => void;
   now?: () => Date;
 }
@@ -67,7 +76,8 @@ export interface MountTodayScreenOptions {
 export function mountTodayScreen(options: MountTodayScreenOptions): {
   destroy: () => void;
 } {
-  const { config, storage, root, exercisesById, routineSourceById, onOpenSettings } = options;
+  const { config, storage, root, exercisesById, routineSourceById, routinesById, onOpenSettings } =
+    options;
   const now = options.now ?? (() => new Date());
 
   const bar = document.createElement("div");
@@ -76,6 +86,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
   document.body.appendChild(bar);
 
   let mediaPreview: ExerciseMediaPreview | null = null;
+  let libraryVideoPreview: LibraryVideoPreview | null = null;
 
   let persisted = mergePersistedState(storage.load(), config);
   const labels = createConditionLabelContext(config, persisted.conditionOverrides ?? {});
@@ -314,6 +325,8 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
   async function mountExpandedMedia(exerciseId: string): Promise<void> {
     mediaPreview?.destroy();
     mediaPreview = null;
+    libraryVideoPreview?.destroy();
+    libraryVideoPreview = null;
     const host = root.querySelector<HTMLElement>(`#today-media-${exerciseId}`);
     const exercise = exercisesById.get(exerciseId);
     if (!host || !exercise) {
@@ -321,6 +334,37 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
     }
     const meta = await getMediaByExerciseId(exerciseId);
     if (!meta) {
+      const routine = routinesById.get(exercise.routineId);
+      if (
+        !routine?.video ||
+        !shouldShowLibraryRoutineVideo(routine.video, false, "library-exercise")
+      ) {
+        return;
+      }
+      const fullDurationS = await probeLibraryVideoDuration(routine.video);
+      if (fullDurationS === null) {
+        return;
+      }
+      const override = await getExerciseClipOverride(exerciseId);
+      const segment = resolveExerciseVideoSegment(
+        { startS: exercise.libraryClipStartS, endS: exercise.libraryClipEndS },
+        override
+          ? { startS: override.clipStartS, endS: override.clipEndS }
+          : undefined,
+        fullDurationS,
+      );
+      const slot = document.createElement("div");
+      host.insertBefore(slot, host.firstChild);
+      const reducedMotion =
+        typeof matchMedia === "function" &&
+        matchMedia("(prefers-reduced-motion: reduce)").matches;
+      libraryVideoPreview = await mountLibraryVideoPreview({
+        root: slot,
+        relativePath: routine.video,
+        ariaLabel: `Routine preview for ${exercise.name}`,
+        segment,
+        reducedMotion,
+      });
       return;
     }
     const settings = await loadMediaSettings();
@@ -717,6 +761,7 @@ export function mountTodayScreen(options: MountTodayScreenOptions): {
       document.removeEventListener("click", handleClick);
       document.removeEventListener("input", handleInput);
       mediaPreview?.destroy();
+      libraryVideoPreview?.destroy();
       bar.remove();
       root.innerHTML = "";
       root.className = "";
