@@ -43,6 +43,7 @@ export async function bootApp(root: HTMLElement): Promise<void> {
   const routineSourceById = new Map(
     library.routines.map((routine) => [routine.id, routine.source] as const),
   );
+  const routinesById = new Map(library.routines.map((routine) => [routine.id, routine] as const));
 
   const persistedCounts = () => {
     const state = mergePersistedState(storage.load(), config);
@@ -98,6 +99,7 @@ export async function bootApp(root: HTMLElement): Promise<void> {
       root,
       exercisesById: exercisesById(),
       routineSourceById,
+      routinesById,
       onOpenSettings: () => showSetup(),
     });
   }

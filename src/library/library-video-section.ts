@@ -1,19 +1,23 @@
 import { renderAnimSection, type AnimAttachOptions } from "../pose/attach-anim-html";
 import { renderRoutineSourceLink } from "./source-link";
+import { exerciseLibraryMediaId } from "./exercise-library-pose";
 import { routineLibraryMediaId } from "./routine-pose";
 import type { NormalizedRoutine } from "./types";
 import type { ExerciseMediaMeta, PoseMeta } from "../media/types";
 import type { PoseJobState } from "../pose/pose-job-service";
 
 export function syntheticRoutineClipMeta(
-  routineId: string,
+  ownerId: string,
   durationS: number,
   pose?: PoseMeta,
+  options?: { exerciseLibrary?: boolean },
 ): ExerciseMediaMeta {
-  const id = routineLibraryMediaId(routineId);
+  const id = options?.exerciseLibrary
+    ? exerciseLibraryMediaId(ownerId)
+    : routineLibraryMediaId(ownerId);
   return {
     id,
-    exerciseId: routineId,
+    exerciseId: ownerId,
     kind: "clip",
     width: 400,
     height: 300,
@@ -37,16 +41,23 @@ export interface LibraryVideoSectionInput {
   unfinished: boolean;
   formAnimView: "anim" | "clip";
   poseRemovedDraft?: boolean;
+  previewSubjectName?: string;
+  poseOwnerId?: string;
+  exerciseLibraryPose?: boolean;
+  clipControlsHtml?: string;
 }
 
 export function renderLibraryVideoSection(input: LibraryVideoSectionInput): string {
   if (!input.routine.video || input.durationS === null) {
     return renderRoutineSourceLink(input.routine.source);
   }
-  const meta = syntheticRoutineClipMeta(input.routine.id, input.durationS, input.pose);
+  const poseOwnerId = input.poseOwnerId ?? input.routine.id;
+  const meta = syntheticRoutineClipMeta(poseOwnerId, input.durationS, input.pose, {
+    exerciseLibrary: input.exerciseLibraryPose,
+  });
   const anim: AnimAttachOptions = {
     meta,
-    exerciseName: input.routine.title,
+    exerciseName: input.previewSubjectName ?? input.routine.title,
     job: input.job,
     modelCached: input.modelCached,
     modelOnDevice: input.modelOnDevice,
@@ -61,9 +72,11 @@ export function renderLibraryVideoSection(input: LibraryVideoSectionInput): stri
     meta.kind === "clip"
       ? `<div class="anim-divider"></div><div id="library-video-anim-mount">${renderAnimSection(anim)}</div>`
       : "";
+  const controls = input.clipControlsHtml ?? "";
   return `<div class="sect"><h2>Routine preview</h2></div>
     <div class="group">
       <div id="library-video-mount"></div>
+      ${controls}
       ${source}
       ${animHtml}
     </div>`;

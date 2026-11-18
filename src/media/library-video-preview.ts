@@ -1,25 +1,51 @@
 import "./media.css";
-import { libraryVideoUrl } from "../library/video-path";
+import {
+  libraryVideoUrlWithFragment,
+  type ResolvedVideoSegment,
+} from "../library/video-segment";
 
 export interface MountLibraryVideoPreviewOptions {
   root: HTMLElement;
   relativePath: string;
   ariaLabel: string;
   belowHtml?: string;
+  segment?: ResolvedVideoSegment | null;
+  reducedMotion?: boolean;
+}
+
+export interface LibraryVideoPreviewHandle {
+  getVideo(): HTMLVideoElement | null;
+  isPlaying(): boolean;
+  destroy(): void;
 }
 
 /** Inline muted looping preview for deploy-served library routine video. */
-export class LibraryVideoPreview {
+export class LibraryVideoPreview implements LibraryVideoPreviewHandle {
   private video: HTMLVideoElement | null = null;
   private ok = false;
+  private onSegmentLoop: (() => void) | null = null;
 
   constructor(private readonly options: MountLibraryVideoPreviewOptions) {}
 
   async mount(): Promise<boolean> {
-    const { root, relativePath, ariaLabel, belowHtml = "" } = this.options;
-    const url = libraryVideoUrl(relativePath);
+    const {
+      root,
+      relativePath,
+      ariaLabel,
+      belowHtml = "",
+      segment = null,
+      reducedMotion = false,
+    } = this.options;
+    const url = segment
+      ? libraryVideoUrlWithFragment(relativePath, segment)
+      : libraryVideoUrlWithFragment(relativePath, {
+          startS: 0,
+          endS: 0,
+          usesFullVideo: true,
+        });
+    const loopAttr = segment && !segment.usesFullVideo && !reducedMotion ? "" : " loop";
     root.innerHTML = `<div class="media-frame today-media library-routine-video" data-library-video="1">
-      <video class="media-cover" playsinline muted loop preload="metadata" aria-label="${escapeAttr(ariaLabel)}"></video>
+      <video class="media-cover" playsinline muted${loopAttr} preload="metadata" aria-label="${escapeAttr(ariaLabel)}"></video>
     </div>${belowHtml}`;
     const video = root.querySelector<HTMLVideoElement>("video");
     if (!video) {
@@ -47,7 +73,13 @@ export class LibraryVideoPreview {
     this.ok = true;
     video.muted = true;
     video.playsInline = true;
-    video.loop = true;
+    if (!segment || segment.usesFullVideo) {
+      video.loop = !reducedMotion;
+    } else {
+      video.loop = false;
+      this.onSegmentLoop = attachSegmentLoop(video, segment, reducedMotion);
+      video.currentTime = segment.startS;
+    }
     try {
       await video.play();
     } catch {
@@ -56,11 +88,19 @@ export class LibraryVideoPreview {
     return true;
   }
 
+  getVideo(): HTMLVideoElement | null {
+    return this.video;
+  }
+
   isPlaying(): boolean {
     return this.ok;
   }
 
   destroy(): void {
+    if (this.onSegmentLoop && this.video) {
+      this.video.removeEventListener("timeupdate", this.onSegmentLoop);
+    }
+    this.onSegmentLoop = null;
     this.video?.pause();
     if (this.video) {
       this.video.removeAttribute("src");
@@ -69,6 +109,25 @@ export class LibraryVideoPreview {
     this.video = null;
     this.ok = false;
   }
+}
+
+export function attachSegmentLoop(
+  video: HTMLVideoElement,
+  segment: Pick<ResolvedVideoSegment, "startS" | "endS">,
+  reducedMotion: boolean,
+): () => void {
+  const epsilon = 0.05;
+  const onTimeUpdate = () => {
+    if (reducedMotion) {
+      return;
+    }
+    if (video.currentTime >= segment.endS - epsilon) {
+      video.currentTime = segment.startS;
+      void video.play().catch(() => undefined);
+    }
+  };
+  video.addEventListener("timeupdate", onTimeUpdate);
+  return onTimeUpdate;
 }
 
 function escapeAttr(text: string): string {

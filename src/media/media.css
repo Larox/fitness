@@ -492,3 +492,28 @@
   color: var(--muted);
   margin-top: 8px;
 }
+
+.clip-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+.clip-controls button {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg);
+  font-weight: 600;
+}
+
+.clip-range {
+  width: 100%;
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--muted);
+}

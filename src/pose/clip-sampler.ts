@@ -8,6 +8,7 @@ export async function sampleClipLandmarks(
   detector: PoseDetector,
   onFrame: (frame: number, total: number) => void,
   signal: AbortSignal,
+  segmentStartS = 0,
 ): Promise<(MpLandmark[] | null)[]> {
   const url = URL.createObjectURL(videoBlob);
   const video = document.createElement("video");
@@ -24,8 +25,9 @@ export async function sampleClipLandmarks(
   let lastUi = 0;
   for (let i = 0; i < total; i++) {
     if (signal.aborted) throw new DOMException("Aborted", "AbortError");
-    const t = i / POSE_SAMPLE_FPS;
-    video.currentTime = Math.min(t, Math.max(0, durationS - 0.001));
+    const t = segmentStartS + i / POSE_SAMPLE_FPS;
+    const maxT = segmentStartS + Math.max(0, durationS - 0.001);
+    video.currentTime = Math.min(t, maxT);
     await new Promise<void>((resolve) => {
       video.onseeked = () => resolve();
     });
